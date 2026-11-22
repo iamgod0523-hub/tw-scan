@@ -190,7 +190,9 @@ def get_shares():
     if os.path.exists(SHARES_FILE):
         with open(SHARES_FILE, encoding="utf-8") as f:
             old = json.load(f)
-        if time.time() - os.path.getmtime(SHARES_FILE) < 7 * 86400:
+        # 抓取時間記在檔案裡（雲端每次重新下載檔案，不能用檔案修改時間判斷）
+        fetched = old.pop("_at", 0)
+        if time.time() - fetched < 7 * 86400:
             return old
     try:
         print("  更新上市公司股數（計算市值用）…", flush=True)
@@ -202,7 +204,7 @@ def get_shares():
                 out[str(r.get("公司代號", "")).strip()] = n
         if out:
             with open(SHARES_FILE, "w", encoding="utf-8") as f:
-                json.dump(out, f)
+                json.dump({**out, "_at": time.time()}, f)
             return out
     except Exception as e:
         print(f"  股數資料抓取失敗（{e}），市值排名改用舊資料" if old else f"  股數資料抓取失敗（{e}），本次無法排除權值股")
