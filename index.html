@@ -143,18 +143,21 @@ tbody tr:hover{background:#151c2b}
     </div>
     <label class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="過濾代號或名稱（例如 2330）"></label>
   </div>
-  <div class="views" role="tablist"><button type="button" id="vScan" aria-pressed="true">收盤選股</button><button type="button" id="vAlert" aria-pressed="false">盤中訊息<span class="dot" id="aDot" hidden></span></button></div>
+  <div class="views" role="tablist"><button type="button" id="vScan" aria-pressed="true">收盤選股</button><button type="button" id="vAlert" aria-pressed="false">盤中訊息<span class="dot" id="aDot" hidden></span></button><button type="button" id="vWatch" aria-pressed="false">監控清單</button></div>
   <section id="alertView" hidden>
     <div class="acard" id="aSetup"></div>
-    <div class="acard" id="wCard" hidden>
+    <div class="status"><span id="aStatus"></span><button class="abtn" id="aRefresh" type="button">重新整理</button></div>
+    <div class="alist" id="aList"></div>
+  </section>
+  <section id="watchView" hidden>
+    <div class="acard" id="wNeed" hidden><h3>需要通知密碼</h3><p>請先到「盤中訊息」輸入通知密碼，才能查看和修改監控清單。</p><div class="arow"><button class="abtn pri" id="wGo" type="button">前往輸入密碼</button></div></div>
+    <div class="acard" id="wCard" hidden style="margin-bottom:40px">
       <h3>盤中監控清單 <span class="amsg" id="wCount"></span></h3>
-      <p>和 TG 的 /watch 是同一份清單，兩邊改都會同步。盤中才加入的股票，「突破／跌破昨日高低點」「黑飛」「60分K爆量」從下一個交易日開始判斷。</p>
+      <p style="margin-top:0">和 TG 的 /watch 是同一份清單，兩邊改都會同步。盤中才加入的股票，「突破／跌破昨日高低點」「黑飛」「60分K爆量」從下一個交易日開始判斷。</p>
       <form class="arow" id="wForm"><input id="wIn" placeholder="輸入代號，可一次多檔，例：2330 2454" autocomplete="off"><button class="abtn pri" type="submit">加入</button></form>
       <p class="amsg" id="wMsg"></p>
       <div class="wlist" id="wList"></div>
     </div>
-    <div class="status"><span id="aStatus"></span><button class="abtn" id="aRefresh" type="button">重新整理</button></div>
-    <div class="alist" id="aList"></div>
   </section>
   <div id="scanView">
   <div class="strats" id="strats" role="group" aria-label="掃描策略"></div>
@@ -440,7 +443,7 @@ async function renderSetup() {
     el.innerHTML = `<h3>輸入通知密碼</h3><p>就是 Cloudflare 上 tw-stock-alert 設定的 APP_CODE，輸入一次就會記住。</p>
 <form class="arow" id="codeForm"><input id="codeIn" type="password" autocomplete="current-password" placeholder="通知密碼"><button class="abtn pri" type="submit">確認</button></form>
 <p class="amsg ${aMsgCls}">${esc(aMsg)}</p>`;
-    $("codeForm").onsubmit = async e => { e.preventDefault(); code = $("codeIn").value.trim(); try { await api("/feed"); save("tws-code", code); aMsg = ""; loadFeed(); loadWatch(); renderSetup(); } catch (err) { code = ""; msg(err.message, "err"); } };
+    $("codeForm").onsubmit = async e => { e.preventDefault(); code = $("codeIn").value.trim(); try { await api("/feed"); save("tws-code", code); aMsg = ""; $("wNeed").hidden = true; loadFeed(); loadWatch(); renderSetup(); } catch (err) { code = ""; msg(err.message, "err"); } };
     return;
   }
   let push = "";
@@ -454,7 +457,7 @@ async function renderSetup() {
           : `<div class="arow"><button class="abtn pri" id="pOn" type="button">開啟通知</button></div>`;
   }
   el.innerHTML = `<h3>通知設定</h3>${push}<p class="amsg ${aMsgCls}">${esc(aMsg)}</p><div class="arow"><button class="abtn" id="codeReset" type="button">更改通知密碼</button></div>`;
-  $("codeReset").onclick = () => { code = ""; save("tws-code", ""); watch = null; renderWatch(); msg(""); };
+  $("codeReset").onclick = () => { code = ""; save("tws-code", ""); watch = null; renderWatch(); $("wNeed").hidden = false; msg(""); };
   if ($("pOn")) $("pOn").onclick = async () => {
     try {
       if (await Notification.requestPermission() !== "granted") throw new Error("沒有允許通知");
@@ -542,13 +545,17 @@ async function loadFeed() {
   renderFeed();
 }
 function showView(v) {
-  $("alertView").hidden = v !== "alerts"; $("scanView").hidden = v === "alerts";
-  $("vScan").setAttribute("aria-pressed", v !== "alerts"); $("vAlert").setAttribute("aria-pressed", v === "alerts");
-  if (v === "alerts") { renderSetup(); loadFeed(); loadWatch(); if (location.hash !== "#alerts") history.replaceState(null, "", "#alerts"); }
-  else if (location.hash === "#alerts") history.replaceState(null, "", location.pathname);
+  $("alertView").hidden = v !== "alerts"; $("watchView").hidden = v !== "watch"; $("scanView").hidden = v !== "scan";
+  $("vScan").setAttribute("aria-pressed", v === "scan"); $("vAlert").setAttribute("aria-pressed", v === "alerts"); $("vWatch").setAttribute("aria-pressed", v === "watch");
+  if (v === "alerts") { renderSetup(); loadFeed(); }
+  if (v === "watch") { $("wNeed").hidden = !!code; loadWatch(); }
+  const h = v === "scan" ? "" : "#" + v;
+  if (location.hash !== h) history.replaceState(null, "", location.pathname + h);
 }
 $("vScan").addEventListener("click", () => showView("scan"));
 $("vAlert").addEventListener("click", () => showView("alerts"));
+$("vWatch").addEventListener("click", () => showView("watch"));
+$("wGo").addEventListener("click", () => showView("alerts"));
 $("aRefresh").addEventListener("click", loadFeed);
 $("aList").addEventListener("click", e => {
   const b = e.target.closest(".chip"); if (!b) return;
@@ -561,7 +568,7 @@ if ("serviceWorker" in navigator) {
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) loadFeed(); });
 pollTimer = setInterval(() => { if (!document.hidden) loadFeed(); }, 60000);
-if (location.hash === "#alerts") showView("alerts"); else { loadFeed(); loadWatch(); }
+if (location.hash === "#alerts") showView("alerts"); else if (location.hash === "#watch") showView("watch"); else { loadFeed(); loadWatch(); }
 
 header(); run();
 }
