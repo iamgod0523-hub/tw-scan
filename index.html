@@ -84,6 +84,10 @@ tbody tr:hover{background:#151c2b}
 .x{background:none;border:0;font-size:22px;color:var(--mut);width:44px;height:44px}
 .db{padding:18px 20px;overflow:auto;flex:1}
 .lg{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;flex-wrap:wrap;gap:6px}.lg span{font-family:var(--mono)}
+.ktabs{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:3px;gap:3px}
+.ktabs button{background:none;border:0;border-radius:6px;padding:6px 12px;font-size:13px;color:var(--mut);min-height:32px}
+.ktabs button[aria-pressed=true]{background:var(--panel2);color:var(--ink);font-weight:700}
+.lg{align-items:center}
 .fig{position:relative;height:330px;background:var(--bg);border:1px solid var(--line);border-radius:10px}
 .fig canvas{position:absolute;inset:0;width:100%;height:100%}
 .tip{position:absolute;top:6px;left:10px;right:62px;line-height:1.35;font-size:12px;font-family:var(--mono);color:var(--mut);pointer-events:none}
@@ -167,8 +171,6 @@ tbody tr:hover{background:#151c2b}
     <div class="empty" id="empty" hidden><b>沒有符合條件的股票</b>可以到「掃描參數設定」放寬成交量或量比。</div>
   </div>
   <button class="more" id="more" type="button" hidden>顯示更多</button>
-  </div>
-
   <div class="rules">
     <div><h3>漲跌幅排行</h3>依今日收盤與昨日收盤計算漲跌幅 <code>(收盤 − 昨收) / 昨收</code>，由大到小（跌幅榜由小到大）。</div>
     <div><h3>月線突破／跌破</h3>月線＝近 20 日收盤平均。突破：<code>昨收 ≤ 昨日MA20</code> 且 <code>今收 &gt; 今日MA20</code>；跌破相反。爆量＝今日量 ≥ 前 5 日均量 × 量比門檻。</div>
@@ -176,6 +178,8 @@ tbody tr:hover{background:#151c2b}
     <div><h3>三大法人</h3>法人佔量＝三大法人買賣超張數 ÷ 當日成交量。K 線側板可看近 5 日外資、投信、自營商明細。</div>
     <div><h3>排除條件</h3>預設排除 ETF 與市值前 50 大權值股（收盤價 × 已發行股數）。資料：臺灣證券交易所每日收盤行情（上市）。僅供參考，非投資建議。</div>
   </div>
+  </div>
+
 </div>
 
 <div class="dlg" id="dlg" hidden>
@@ -198,7 +202,7 @@ tbody tr:hover{background:#151c2b}
 <aside class="drawer" id="drawer" aria-label="K 線指標" aria-hidden="true">
   <div class="dh"><div><h2 id="dName"></h2><div class="q" id="dQuote"></div></div><button class="x" id="dClose" type="button" aria-label="關閉">✕</button></div>
   <div class="db">
-    <div class="lg"><b>日 K 線與均線</b><span><span class="c5" id="lg5"></span> · <span class="c20" id="lg20"></span> · <span class="c60" id="lg60"></span></span></div>
+    <div class="lg"><span class="ktabs" id="ktabs"><button type="button" data-m="d" aria-pressed="true">日 K</button><button type="button" data-m="5" aria-pressed="false">5 分 K</button></span><span><span class="c5" id="lg5"></span> · <span class="c20" id="lg20"></span><span id="lg60w"> · <span class="c60" id="lg60"></span></span></span></div>
     <div class="fig" id="fig"><canvas id="cv"></canvas><div class="tip" id="tip"></div></div>
     <div class="cmp" id="cmp"></div>
     <h3 class="sh">三大法人買賣超（張）</h3>
@@ -314,12 +318,8 @@ function ma(c, n, i) { let s = 0; for (let j = i - n + 1; j <= i; j++) { if (j <
 function showK(code) {
   const x = all.find(r => r.c === code); if (!x) return;
   open = x;
-  $("dName").innerHTML = `${x.c}<small>${esc(x.n)}・日 K 線與均線</small>`;
+  $("dName").innerHTML = `${x.c}<small>${esc(x.n)}・K 線與均線</small>`;
   $("dQuote").innerHTML = `收盤：${f2(x.p)} ・ 漲跌：<span class="${sg(x.ch)}">${pct(x.ch)}</span> ・ 量比 ${f2(x.r)}`;
-  const c60 = x.k.slice(-60).map(b => b && b[3]);
-  const m60 = c60.length === 60 && !c60.includes(null) ? avg(c60) : null;
-  $("lg5").textContent = `MA5 週線 ${f2(x.m5)}`; $("lg20").textContent = `MA20 月線 ${f2(x.m20)}`;
-  $("lg60").textContent = `MA60 季線 ${m60 == null ? "資料不足" : f2(m60)}`;
   $("dGo").href = `https://tw.stock.yahoo.com/quote/${x.c}.TW/technical-analysis`;
   const card = (t, c, m5, m20, cls) => `<div><h4>${t}</h4><p><span>收盤價</span><span>${f2(c)}</span></p><p><span>MA5 / MA20</span><span class="${cls}">${f2(m5)} / ${f2(m20)}</span></p></div>`;
   $("cmp").innerHTML = card("前一根 K 棒（昨日）", x.pv, x.m5p, x.m20p, "") + card("最新收盤 K 棒（今日）", x.p, x.m5, x.m20, x.m5 > x.m20 ? "dn" : "up");
@@ -329,22 +329,63 @@ function showK(code) {
   $("instT").innerHTML = `<tr><th class="l">日期</th><th>外資</th><th>投信</th><th>自營商</th><th>合計</th></tr>` +
     x.f.map((d, i) => `<tr><td class="l">${fd[i] || ""}</td>${d ? d.map(sgn).map(v => `<td>${v}</td>`).join("") : `<td colspan="4">尚無資料</td>`}</tr>`).join("") +
     `<tr><td class="l">${x.f.length} 日合計</td>${[0, 1, 2, 3].map(j => `<td>${sgn(sum(j))}</td>`).join("")}</tr>`;
-  draw(); renderWatchBtn(); $("dClose").focus();
+  setMode(mode); renderWatchBtn(); $("dClose").focus();
 }
 function closeK() { open = null; $("shade").hidden = true; $("drawer").classList.remove("open"); $("drawer").setAttribute("aria-hidden", "true"); }
 
+/* 日 K / 5 分 K 切換。5 分 K 由 Worker 向 Fugle 取得（需通知密碼），含前一交易日最後幾根接續算均線 */
+let mode = "d", chart = null; const m5cache = {};
+function setLegend(items) {
+  $("lg5").textContent = items[0] || ""; $("lg20").textContent = items[1] || "";
+  $("lg60w").hidden = !items[2]; $("lg60").textContent = items[2] || "";
+}
+function lastMa(K, n) { const c = K.map(b => b ? b[3] : null); return ma(c, n, c.length - 1); }
+function drawMsg(t) {
+  chart = null; const cv = $("cv"); const g = cv.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
+  $("tip").textContent = t; setLegend([]);
+}
+async function setMode(m) {
+  mode = m;
+  for (const b of $("ktabs").children) b.setAttribute("aria-pressed", b.dataset.m === m);
+  const x = open; if (!x) return;
+  if (m === "d") {
+    chart = {K: x.k, labels: D.dates || [], mas: [[60, "#c77dff"], [20, "#3fa7ff"], [5, "#f5b83d"]], N: 60};
+    const m60 = lastMa(x.k, 60);
+    setLegend([`MA5 週線 ${f2(x.m5)}`, `MA20 月線 ${f2(x.m20)}`, `MA60 季線 ${m60 == null ? "資料不足" : f2(m60)}`]);
+    return draw();
+  }
+  if (!code) return drawMsg("5 分 K 需要通知密碼：請先到「盤中訊息」輸入。");
+  const c = x.c, hit = m5cache[c];
+  if (!hit) drawMsg("載入 5 分 K…");
+  try {
+    const d = hit && Date.now() - hit.at < 60000 ? hit.d : await api("/candles?symbol=" + encodeURIComponent(c));
+    m5cache[c] = {d, at: hit && hit.d === d ? hit.at : Date.now()};
+    if (!open || open.c !== c || mode !== "5") return;
+    const rows = [...(d.prev || []), ...(d.candles || [])];
+    if (!d.candles || !d.candles.length) return drawMsg(`沒有 ${d.date || "今日"} 的 5 分 K 資料`);
+    const np = (d.prev || []).length;
+    const K = rows.map(r => r.slice(1));
+    chart = {K, labels: rows.map((r, i) => (i < np ? "昨 " : "") + hm(r[0])), mas: [[20, "#3fa7ff"], [5, "#f5b83d"]], N: Math.min(K.length, Math.max(d.candles.length + 10, 40)), split: np};
+    const a5 = lastMa(K, 5), a20 = lastMa(K, 20);
+    setLegend([`5分 MA5 ${a5 == null ? "—" : f2(a5)}`, `MA20 ${a20 == null ? "—" : f2(a20)}`]);
+    draw();
+  } catch (err) { drawMsg("5 分 K 載入失敗：" + err.message); }
+}
+$("ktabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setMode(b.dataset.m); });
+setInterval(() => { if (open && mode === "5" && !document.hidden) setMode("5"); }, 60000);
+
 let geo = null;
 function draw(hover) {
-  const cv = $("cv"), x = open; if (!x) return;
+  const cv = $("cv"); if (!open || !chart) return;
   const W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1;
   cv.width = W * dpr; cv.height = H * dpr;
   const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-  const K = x.k, c = K.map(b => b ? b[3] : null), N = Math.min(60, K.length), s0 = K.length - N;
-  const m5 = K.map((_, i) => ma(c, 5, i)), m20 = K.map((_, i) => ma(c, 20, i)), m60 = K.map((_, i) => ma(c, 60, i));
+  const K = chart.K, c = K.map(b => b ? b[3] : null), N = Math.min(chart.N, K.length), s0 = K.length - N;
+  const lines = chart.mas.map(([n, col]) => [K.map((_, i) => ma(c, n, i)), col]);
   let hi = -Infinity, lo = Infinity, vmax = 1;
   for (let i = s0; i < K.length; i++) {
     const b = K[i]; if (b) { hi = Math.max(hi, b[1]); lo = Math.min(lo, b[2]); vmax = Math.max(vmax, b[4]); }
-    for (const v of [m5[i], m20[i], m60[i]]) if (v != null) { hi = Math.max(hi, v); lo = Math.min(lo, v); }
+    for (const [arr] of lines) { const v = arr[i]; if (v != null) { hi = Math.max(hi, v); lo = Math.min(lo, v); } }
   }
   const padL = 8, padR = 56, top = 26, ph = (H - top - 10) * 0.74, vh = (H - top - 10) * 0.2, vy = H - 8;
   const cw = (W - padL - padR) / N, y = v => top + (hi - v) / (hi - lo || 1) * ph, xc = i => padL + (i - s0 + 0.5) * cw;
@@ -353,6 +394,11 @@ function draw(hover) {
     const v = lo + (hi - lo) * t / 4, yy = Math.round(y(v)) + .5;
     g.setLineDash([3, 4]); g.beginPath(); g.moveTo(padL, yy); g.lineTo(W - padR, yy); g.stroke(); g.setLineDash([]);
     g.fillText(f2(v), W - padR + 6, yy + 4);
+  }
+  if (chart.split && chart.split > s0) {
+    const sx = Math.round(xc(chart.split) - cw / 2) + .5;
+    g.strokeStyle = "#4a5670"; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(sx, top); g.lineTo(sx, H - 4); g.stroke(); g.setLineDash([]);
+    g.fillStyle = "#8a94a8"; g.fillText("昨", Math.max(padL, sx - 18), top + 12); g.fillText("今", sx + 6, top + 12);
   }
   const up = "#ff4d5e", dn = "#19c48a";
   for (let i = s0; i < K.length; i++) {
@@ -363,13 +409,13 @@ function draw(hover) {
     const yo = y(b[0]), yc = y(b[3]); g.fillRect(cx - bw / 2, Math.min(yo, yc), bw, Math.max(1, Math.abs(yc - yo)));
     g.globalAlpha = .45; const vhgt = b[4] / vmax * vh; g.fillRect(cx - bw / 2, vy - vhgt, bw, vhgt); g.globalAlpha = 1;
   }
-  for (const [arr, col] of [[m60, "#c77dff"], [m20, "#3fa7ff"], [m5, "#f5b83d"]]) {
+  for (const [arr, col] of lines) {
     g.strokeStyle = col; g.lineWidth = 1.6; g.beginPath(); let on = false;
     for (let i = s0; i < K.length; i++) { const v = arr[i]; if (v == null) { on = false; continue; } on ? g.lineTo(xc(i), y(v)) : g.moveTo(xc(i), y(v)); on = true; }
     g.stroke();
   }
   geo = {s0, cw, padL, N};
-  const tip = $("tip"), dates = D.dates || [];
+  const tip = $("tip"), dates = chart.labels;
   const i = hover ?? K.length - 1, b = K[i];
   if (hover != null) { g.strokeStyle = "#4a5670"; g.lineWidth = 1; g.beginPath(); g.moveTo(Math.round(xc(i)) + .5, top); g.lineTo(Math.round(xc(i)) + .5, H - 4); g.stroke(); }
   tip.innerHTML = b ? `${dates[i] || ""} 開 ${f2(b[0])} 高 ${f2(b[1])} 低 ${f2(b[2])} 收 <span class="${b[3] >= b[0] ? "up" : "dn"}">${f2(b[3])}</span> 量 ${b[4].toLocaleString()}` : `${dates[i] || ""} 無交易`;
