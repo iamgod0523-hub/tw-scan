@@ -64,6 +64,8 @@ tbody tr:hover{background:#151c2b}
 .sym{font-family:"Microsoft JhengHei",system-ui,sans-serif;font-weight:700}
 .sym a{color:var(--ink);text-decoration:none}.sym a:hover{color:var(--acc)}
 .sym small{color:var(--mut);font-weight:400;margin-left:6px;font-size:13px}
+.otc{display:inline-block;margin-left:6px;padding:0 5px;border:1px solid var(--line);border-radius:4px;font-size:11px;color:var(--mut);font-weight:400;vertical-align:1px}
+td.grp{white-space:normal;min-width:120px;max-width:220px;font-family:"Microsoft JhengHei",system-ui,sans-serif;font-size:13px;color:#c8cfdc;text-align:left}
 .up{color:var(--up)}.dn{color:var(--dn)}.c5{color:var(--ma5)}.c20{color:var(--ma20)}.c60{color:var(--ma60)}
 .kbtn{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:13px;font-family:"Microsoft JhengHei",sans-serif}
 .kbtn:hover{border-color:var(--acc)}
@@ -150,7 +152,7 @@ tbody tr:hover{background:#151c2b}
       <h1>台股日 K 均線・量能盤後選股</h1>
       <div class="sub" id="sub"></div>
     </div>
-    <label class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="過濾代號或名稱（例如 2330）"></label>
+    <label class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="代號、名稱或族群（例如 2330、散熱）"></label>
   </div>
   <div class="views" role="tablist"><button type="button" id="vScan" aria-pressed="true">盤後選股</button><button type="button" id="vAlert" aria-pressed="false">盤中訊息<span class="dot" id="aDot" hidden></span></button><button type="button" id="vWatch" aria-pressed="false">監控清單</button></div>
   <section id="alertView" hidden>
@@ -199,7 +201,7 @@ tbody tr:hover{background:#151c2b}
     <div><h3>篩選方式</h3>設定好條件後按「開始篩選」。每個條件都是「而且」：要同時符合所有有設定的條件才會列出。留空或選「不限」就是不篩這一項。條件會自動記住。點表頭可以排序。</div>
     <div><h3>月線</h3>月線＝近 20 日收盤平均。今日突破：<code>昨收 ≤ 昨日月線</code> 且 <code>今收 &gt; 今日月線</code>；跌破相反。量比＝今日量 ÷ 前 5 日均量。</div>
     <div><h3>三大法人</h3>表格的法人佔量＝三大法人買賣超張數 ÷ 當日成交量。K 線側板可看近 5 日外資、投信、自營商明細。</div>
-    <div><h3>排除條件</h3>權值股依市值排名（收盤價 × 已發行股數）。資料：臺灣證券交易所每日收盤行情（上市）。僅供參考，非投資建議。</div>
+    <div><h3>排除條件</h3>權值股依市值排名（收盤價 × 已發行股數）。資料：臺灣證券交易所、證券櫃檯買賣中心每日收盤行情（上市＋上櫃，股票名稱旁標「櫃」的是上櫃）。族群依自建的族群對照表，一檔可屬多個族群。僅供參考，非投資建議。</div>
   </div>
   </div>
 
@@ -219,6 +221,7 @@ tbody tr:hover{background:#151c2b}
 </aside>
 
 <script src="data.js"></script>
+<script src="groups.js"></script>
 <script>
 {
 const D = window.TWS_DATA || null;
@@ -226,7 +229,7 @@ const $ = id => document.getElementById(id);
 const DEF = {vol:500, ratio:2, pmin:"", pmax:"", chmin:"", chmax:"", ma20:"above", noetf:true, nobig:true, bign:50};
 const CLEAR = {...Object.fromEntries(Object.keys(DEF).map(k => [k, ""])), noetf:true, nobig:true, bign:50};
 const COLS = [
-  {k:"i", t:"排名", l:1, ns:1}, {k:"c", t:"股票", l:1}, {k:"p", t:"收盤"}, {k:"ch", t:"漲跌%"},
+  {k:"i", t:"排名", l:1, ns:1}, {k:"c", t:"股票", l:1}, {k:"g", t:"族群", l:1, ns:1}, {k:"p", t:"收盤"}, {k:"ch", t:"漲跌%"},
   {k:"v", t:"成交量(張)"}, {k:"r", t:"量比"}, {k:"fi", t:"法人買賣超(張)"}, {k:"fr", t:"法人佔量%"},
   {k:"d", t:"距月線%", h:1}, {k:"x", t:"圖表診斷", ns:1}
 ];
@@ -248,7 +251,7 @@ function calc(raw) {
   const m60 = ok60 ? avg(c61.slice(1)) : null, m60p = ok60 ? avg(c61.slice(0, 60)) : null;
   return {c: raw.c, n: raw.n, k: K, p, pv, m60, m60p, ch: r2((p / pv - 1) * 100), v: v6[5], r: a5 ? r2(v6[5] / a5) : 0,
     m5: r2(m5), m5p: r2(m5p), m20: r2(m20), m20p: r2(m20p), d: r2((p / m20 - 1) * 100),
-    gap: r2((m5 / m20 - 1) * 100), mc: raw.sh ? Math.round(p * raw.sh / 1e8) : null, etf: !/^[1-9]\d{3}$/.test(raw.c),
+    gap: r2((m5 / m20 - 1) * 100), mc: raw.sh ? Math.round(p * raw.sh / 1e8) : null, etf: !/^[1-9]\d{3}$/.test(raw.c), otc: raw.m === "o", g: (window.TWS_GROUPS || {})[raw.c] || [],
     ...inst(raw, v6[5])};
 }
 function inst(raw, vol) {
@@ -298,7 +301,8 @@ function summary() {
 
 function run() {
   const q = $("q").value.trim();
-  rows = ran ? all.filter(x => pass(x) && (!q || x.c.includes(q) || x.n.includes(q))) : q ? all.filter(x => x.c.includes(q) || x.n.includes(q)) : [];
+  const hit = x => x.c.includes(q) || x.n.includes(q) || x.g.some(g => g.includes(q));
+  rows = ran ? all.filter(x => pass(x) && (!q || hit(x))) : q ? all.filter(hit) : [];
   const m = sortDir === "asc" ? 1 : -1, k = sortK;
   rows.sort((a, b) => (k === "c" ? a.c.localeCompare(b.c) : (a[k] ?? -1e9) - (b[k] ?? -1e9)) * m);
   const {cond, ex} = summary();
@@ -314,7 +318,8 @@ function render() {
   $("more").hidden = rows.length <= limit;
   $("tb").innerHTML = rows.slice(0, limit).map((x, i) => `<tr>
 <td class="l">${i + 1}</td>
-<td class="l sym"><a href="https://tw.stock.yahoo.com/quote/${x.c}.TW" target="_blank" rel="noopener">${x.c} ↗</a><small>${esc(x.n)}</small></td>
+<td class="l sym"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c} ↗</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}</td>
+<td class="grp">${x.g.length ? esc(x.g.join("、")) : "—"}</td>
 <td class="${sg(x.ch)}">${f2(x.p)}</td><td class="${sg(x.ch)}">${pct(x.ch)}</td>
 <td>${x.v.toLocaleString()}</td><td>${f2(x.r)}</td>
 <td class="${sg(x.fi)}">${x.fi == null ? "—" : (x.fi > 0 ? "+" : "") + x.fi.toLocaleString()}</td><td class="${sg(x.fr)}">${x.fr == null ? "—" : pct(x.fr)}</td>
@@ -332,9 +337,9 @@ function ma(c, n, i) { let s = 0; for (let j = i - n + 1; j <= i; j++) { if (j <
 function showK(code) {
   const x = all.find(r => r.c === code); if (!x) return;
   open = x;
-  $("dName").innerHTML = `${x.c}<small>${esc(x.n)}・K 線與均線</small>`;
+  $("dName").innerHTML = `${x.c}<small>${esc(x.n)}${x.otc ? "（上櫃）" : ""}${x.g.length ? "・" + esc(x.g.join("、")) : ""}</small>`;
   $("dQuote").innerHTML = `收盤：${f2(x.p)} ・ 漲跌：<span class="${sg(x.ch)}">${pct(x.ch)}</span> ・ 量比 ${f2(x.r)}`;
-  $("dGo").href = `https://tw.stock.yahoo.com/quote/${x.c}.TW/technical-analysis`;
+  $("dGo").href = `https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}/technical-analysis`;
   const card = (t, c, m5, m20, cls) => `<div><h4>${t}</h4><p><span>收盤價</span><span>${f2(c)}</span></p><p><span>MA5 / MA20</span><span class="${cls}">${f2(m5)} / ${f2(m20)}</span></p></div>`;
   $("cmp").innerHTML = card("前一根 K 棒（昨日）", x.pv, x.m5p, x.m20p, "") + card("最新收盤 K 棒（今日）", x.p, x.m5, x.m20, x.m5 > x.m20 ? "dn" : "up");
   $("shade").hidden = false; $("drawer").classList.add("open"); $("drawer").setAttribute("aria-hidden", "false");
@@ -434,7 +439,7 @@ $("hd").addEventListener("keydown", e => { if (e.key === "Enter") e.target.click
 $("shade").addEventListener("click", closeK); $("dClose").addEventListener("click", closeK);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeK(); });
 
-$("sub").innerHTML = D ? `已載入 <b>${all.length.toLocaleString()}</b> 檔上市股票 ・ 資料日期 ${D.date} ・ 產生於 ${D.built} ・ 資料來源：臺灣證券交易所` : "尚無資料：請先點兩下「執行選股.bat」抓取資料";
+$("sub").innerHTML = D ? `已載入 <b>${all.length.toLocaleString()}</b> 檔上市櫃股票 ・ 資料日期 ${D.date} ・ 產生於 ${D.built} ・ 資料來源：證交所、櫃買中心` : "尚無資料：請先點兩下「執行選股.bat」抓取資料";
 /* ---- 盤中訊息與推播（資料來自 tw-stock-alert Worker） ---- */
 const WORKER = "https://tw-stock-alert.tw-stock-alert-worker.workers.dev";
 let code = load("tws-code", "");
