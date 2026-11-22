@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-台股收盤選股（上市）
+台股收盤選股（上市＋上櫃）
 - 從證交所抓近 26 個交易日的每日收盤行情（MI_INDEX），存在 data/ 資料夾，之後只補抓新的日子
 - 存成 data.js；畫面是「台股掃描.html」，直接打開即可篩選（更新畫面不必重跑本程式）
 
@@ -38,6 +38,10 @@ T86_URLS = [  # 三大法人買賣超日報
     "https://www.twse.com.tw/fund/T86?response=json&date={d}&selectType=ALLBUT0999",
 ]
 INST_DAYS = 5
+
+# 櫃買中心（上櫃）：每日收盤行情、三大法人。日期格式 2026/11/20
+TPEX_QUOTE_URL = "https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes?date={d}&id=&response=json"
+TPEX_INST_URL = "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade?type=Daily&sect=EW&date={d}&id=&response=json"
 
 URLS = [
     "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date={d}&type=ALLBUT0999&response=json",
@@ -211,7 +215,106 @@ def get_shares():
     return old
 
 
-def compute(days, shares, inst):
+def tpex_table(j):
+    if not isinstance(j, dict) or str(j.get("stat", "")).lower() != "ok":
+        return None, None
+    t = (j.get("tables") or [None])[0]
+    if not t or not t.get("data"):
+        return None, None
+    return t.get("fields") or [], t["data"]
+
+
+def parse_tpex(j):
+    """上櫃行情 → ({代號: [名稱, 成交股數, 開, 高, 低, 收]}, {代號: 發行股數})；只留一般股票（四碼）"""
+    f, data = tpex_table(j)
+    if not data:
+        return None, None
+    i = {n: f.index(n) for n in ("代號", "名稱", "收盤", "開盤", "最高", "最低", "成交股數")}
+    ish = f.index("發行股數") if "發行股數" in f else None
+    out, sh = {}, {}
+    for row in data:
+        code = str(row[i["代號"]]).strip()
+        if not (len(code) == 4 and code.isdigit() and code[0] != "0"):
+            continue
+        out[code] = [str(row[i["名稱"]]).strip(), num(row[i["成交股數"]]), num(row[i["開盤"]]),
+                     num(row[i["最高"]]), num(row[i["最低"]]), num(row[i["收盤"]])]
+        if ish is not None and num(row[ish]):
+            sh[code] = num(row[ish])
+    return out or None, sh
+
+
+def get_tpex_day(d, today):
+    """上櫃某日行情；只在上市有開盤的日子呼叫。過去的日子抓到就存起來"""
+    key = d.strftime("%Y%m%d")
+    path = os.path.join(CACHE, "otc_" + key + ".json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    data = None
+    try:
+        data, sh = parse_tpex(http_json(TPEX_QUOTE_URL.format(d=d.strftime("%Y/%m/%d"))))
+    except Exception as e:
+        print(f"  {d:%Y-%m-%d} 上櫃行情抓取失敗：{e}")
+    time.sleep(PAUSE)
+    if data:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+        if sh:  # 最新一天的發行股數，算市值用
+            with open(os.path.join(CACHE, "otc_shares.json"), "w", encoding="utf-8") as f:
+                json.dump(sh, f)
+    return data
+
+
+def parse_tpex_inst(j):
+    """上櫃三大法人 → {代號: [外資, 投信, 自營商, 合計]}（張）"""
+    f, data = tpex_table(j)
+    if not data:
+        return None
+    # 欄位依序：外資(不含自營) 買/賣/超、外資自營 3 欄、外資合計 3 欄、投信 3 欄、自營(自行) 3 欄、自營(避險) 3 欄、自營合計 3 欄、三大合計
+    if len(f) < 24:
+        return None
+    out = {}
+    for row in data:
+        code = str(row[0]).strip()
+        if not (len(code) == 4 and code.isdigit()):
+            continue
+        out[code] = [round((num(row[k]) or 0) / 1000) for k in (4, 13, 22, 23)]
+    return out or None
+
+
+def get_tpex_inst(d, today):
+    key = d.strftime("%Y%m%d")
+    path = os.path.join(CACHE, "otc_t86_" + key + ".json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    data = None
+    try:
+        data = parse_tpex_inst(http_json(TPEX_INST_URL.format(d=d.strftime("%Y/%m/%d"))))
+    except Exception:
+        pass
+    time.sleep(PAUSE)
+    if data:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    return data
+
+
+def add_tpex(days, today):
+    """把上櫃資料併進每天的行情，上櫃股票標記 m=o"""
+    print("  抓取上櫃收盤資料（第一次約需 8 分鐘，之後只補新的日子）…", flush=True)
+    otc = set()
+    for d, data in days:
+        t = get_tpex_day(d, today)
+        if t:
+            for code, v in t.items():
+                if code not in data:
+                    data[code] = v
+                    otc.add(code)
+    return otc
+
+
+def compute(days, shares, inst, otc=frozenset()):
     """只整理原始資料；均線、量比、策略都在網頁裡算，改畫面或條件不必重跑"""
     last_date, last = days[-1]
     rows = []
@@ -223,8 +326,11 @@ def compute(days, shares, inst):
             k.append([r[2], r[3], r[4], r[5], round((r[1] or 0) / 1000)] if ok else None)
         if k[-1] is None:
             continue
-        rows.append({"c": code, "n": info[0], "sh": shares.get(code), "k": k,
-                     "f": [d.get(code) if d else None for d in inst]})  # 近 5 日法人 [外資, 投信, 自營, 合計]
+        row = {"c": code, "n": info[0], "sh": shares.get(code), "k": k,
+               "f": [d.get(code) if d else None for d in inst]}  # 近 5 日法人 [外資, 投信, 自營, 合計]
+        if code in otc:
+            row["m"] = "o"  # 上櫃
+        rows.append(row)
     return last_date, rows
 
 
@@ -303,20 +409,28 @@ def main():
         print(f"只取得 {len(days)} 個交易日，不足以計算月線。")
         return 1
     today = datetime.date.today()
+    otc = add_tpex(days, today)
     print("  抓取三大法人買賣超（近 5 日）…", flush=True)
     recent = [d for d, _ in days[-INST_DAYS:]]
     inst = []
     for d in recent:
         try:
-            inst.append(get_t86(d, today))
+            a = get_t86(d, today)
         except Exception:
-            inst.append(None)
+            a = None
+        b = get_tpex_inst(d, today) if otc else None
+        inst.append({**(b or {}), **(a or {})} if (a or b) else None)
     if inst[-1] is None:
         print("  今日法人資料尚未公布或抓取失敗（約 16:00 後公布），晚點再執行一次即可補上")
-    last_date, rows = compute(days, get_shares(), inst)
+    shares = get_shares()
+    otc_sh = os.path.join(CACHE, "otc_shares.json")
+    if os.path.exists(otc_sh):
+        with open(otc_sh, encoding="utf-8") as f:
+            shares = {**json.load(f), **shares}
+    last_date, rows = compute(days, shares, inst, otc)
     write_data(last_date, rows, [d.strftime("%m/%d") for d, _ in days],
                [d.strftime("%m/%d") for d in recent])
-    print(f"\n完成：資料日期 {last_date:%Y-%m-%d}，共 {len(rows)} 檔。請打開：{PAGE}")
+    print(f"\n完成：資料日期 {last_date:%Y-%m-%d}，共 {len(rows)} 檔（上櫃 {sum(1 for r in rows if r.get('m') == 'o')} 檔）。請打開：{PAGE}")
     try:
         github_upload()
     except Exception as e:
