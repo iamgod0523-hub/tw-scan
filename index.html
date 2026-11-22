@@ -117,6 +117,12 @@ tbody tr:hover{background:#151c2b}
 .chips{grid-column:2;display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;min-height:36px}
 .chip:hover{border-color:var(--acc)}
+.wlist{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.wchip{display:inline-flex;align-items:center;gap:4px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 4px 4px 12px;font-size:14px;min-height:36px}
+.wchip.other{padding-right:12px;color:var(--mut)}
+.wchip button{background:none;border:0;color:var(--mut);width:32px;height:32px;border-radius:50%;font-size:14px}.wchip button:hover{background:#2a3246;color:var(--up)}
+.wchip b{font-weight:600;cursor:pointer}
+.linkbtn{background:none;border:0;color:var(--acc);text-decoration:underline;padding:0 4px;font-size:13px}
 .aempty{padding:40px 20px;text-align:center;color:var(--mut);background:var(--panel);border:1px dashed var(--line);border-radius:12px}
 @media(max-width:700px){.nav{display:none}.tbtn span{display:none}th,td{padding:10px 8px}.hs{display:none}.cmp{grid-template-columns:1fr}}
 </style>
@@ -140,6 +146,13 @@ tbody tr:hover{background:#151c2b}
   <div class="views" role="tablist"><button type="button" id="vScan" aria-pressed="true">收盤選股</button><button type="button" id="vAlert" aria-pressed="false">盤中訊息<span class="dot" id="aDot" hidden></span></button></div>
   <section id="alertView" hidden>
     <div class="acard" id="aSetup"></div>
+    <div class="acard" id="wCard" hidden>
+      <h3>盤中監控清單 <span class="amsg" id="wCount"></span></h3>
+      <p>和 TG 的 /watch 是同一份清單，兩邊改都會同步。盤中才加入的股票，「突破／跌破昨日高低點」「黑飛」「60分K爆量」從下一個交易日開始判斷。</p>
+      <form class="arow" id="wForm"><input id="wIn" placeholder="輸入代號，可一次多檔，例：2330 2454" autocomplete="off"><button class="abtn pri" type="submit">加入</button></form>
+      <p class="amsg" id="wMsg"></p>
+      <div class="wlist" id="wList"></div>
+    </div>
     <div class="status"><span id="aStatus"></span><button class="abtn" id="aRefresh" type="button">重新整理</button></div>
     <div class="alist" id="aList"></div>
   </section>
@@ -188,7 +201,7 @@ tbody tr:hover{background:#151c2b}
     <h3 class="sh">三大法人買賣超（張）</h3>
     <div class="scroll"><table class="mini" id="instT"></table></div>
   </div>
-  <div class="df"><span>外部連結將開啟 Yahoo 股市</span><a class="go" id="dGo" target="_blank" rel="noopener">前往 Yahoo 技術分析 ↗</a></div>
+  <div class="df"><button class="abtn" id="dWatch" type="button" hidden>＋ 加入盤中監控</button><a class="go" id="dGo" target="_blank" rel="noopener">前往 Yahoo 技術分析 ↗</a></div>
 </aside>
 
 <script src="data.js"></script>
@@ -313,7 +326,7 @@ function showK(code) {
   $("instT").innerHTML = `<tr><th class="l">日期</th><th>外資</th><th>投信</th><th>自營商</th><th>合計</th></tr>` +
     x.f.map((d, i) => `<tr><td class="l">${fd[i] || ""}</td>${d ? d.map(sgn).map(v => `<td>${v}</td>`).join("") : `<td colspan="4">尚無資料</td>`}</tr>`).join("") +
     `<tr><td class="l">${x.f.length} 日合計</td>${[0, 1, 2, 3].map(j => `<td>${sgn(sum(j))}</td>`).join("")}</tr>`;
-  draw(); $("dClose").focus();
+  draw(); renderWatchBtn(); $("dClose").focus();
 }
 function closeK() { open = null; $("shade").hidden = true; $("drawer").classList.remove("open"); $("drawer").setAttribute("aria-hidden", "true"); }
 
@@ -427,7 +440,7 @@ async function renderSetup() {
     el.innerHTML = `<h3>輸入通知密碼</h3><p>就是 Cloudflare 上 tw-stock-alert 設定的 APP_CODE，輸入一次就會記住。</p>
 <form class="arow" id="codeForm"><input id="codeIn" type="password" autocomplete="current-password" placeholder="通知密碼"><button class="abtn pri" type="submit">確認</button></form>
 <p class="amsg ${aMsgCls}">${esc(aMsg)}</p>`;
-    $("codeForm").onsubmit = async e => { e.preventDefault(); code = $("codeIn").value.trim(); try { await api("/feed"); save("tws-code", code); aMsg = ""; loadFeed(); renderSetup(); } catch (err) { code = ""; msg(err.message, "err"); } };
+    $("codeForm").onsubmit = async e => { e.preventDefault(); code = $("codeIn").value.trim(); try { await api("/feed"); save("tws-code", code); aMsg = ""; loadFeed(); loadWatch(); renderSetup(); } catch (err) { code = ""; msg(err.message, "err"); } };
     return;
   }
   let push = "";
@@ -441,7 +454,7 @@ async function renderSetup() {
           : `<div class="arow"><button class="abtn pri" id="pOn" type="button">開啟通知</button></div>`;
   }
   el.innerHTML = `<h3>通知設定</h3>${push}<p class="amsg ${aMsgCls}">${esc(aMsg)}</p><div class="arow"><button class="abtn" id="codeReset" type="button">更改通知密碼</button></div>`;
-  $("codeReset").onclick = () => { code = ""; save("tws-code", ""); msg(""); };
+  $("codeReset").onclick = () => { code = ""; save("tws-code", ""); watch = null; renderWatch(); msg(""); };
   if ($("pOn")) $("pOn").onclick = async () => {
     try {
       if (await Notification.requestPermission() !== "granted") throw new Error("沒有允許通知");
@@ -457,6 +470,58 @@ async function renderSetup() {
   if ($("pTest")) $("pTest").onclick = async () => { try { const sub = await currentSub(); const r = await api("/test", {sub: sub.toJSON()}); msg(r.ok ? "已送出測試通知。" : "推播失敗（" + r.status + "）", r.ok ? "ok" : "err"); } catch (err) { msg(err.message, "err"); } };
   if ($("pOff")) $("pOff").onclick = async () => { try { const sub = await currentSub(); if (sub) { await api("/unsubscribe", {endpoint: sub.endpoint}).catch(() => {}); await sub.unsubscribe(); } msg("已關閉這台裝置的通知。"); } catch (err) { msg(err.message, "err"); } };
 }
+/* ---- 盤中監控清單（Worker /api/watch，和 TG /watch 共用） ---- */
+let watch = null;
+const watching = c => !!(watch && watch.symbols.some(x => x.s === c));
+function renderWatch(note, cls = "", undo = null) {
+  $("wCard").hidden = !code || !watch;
+  if (note !== undefined) { $("wMsg").className = "amsg " + cls; $("wMsg").innerHTML = esc(note) + (undo ? ` <button class="linkbtn" type="button" id="wUndo">復原</button>` : ""); if (undo) $("wUndo").onclick = () => watchChange({add: undo}); }
+  if (!watch) return;
+  const n = watch.symbols.length;
+  $("wCount").textContent = `${n} / ${watch.max} 檔`;
+  $("wCount").className = "amsg " + (n > watch.max ? "err" : "");
+  $("wList").innerHTML = watch.symbols.map(x => `<span class="wchip ${x.mine ? "" : "other"}"><b data-c="${esc(x.s)}">${esc(x.s)} ${esc(x.n)}</b>${x.mine ? `<button type="button" data-rm="${esc(x.s)}" aria-label="移除 ${esc(x.s)}">✕</button>` : ""}</span>`).join("") || `<span class="amsg">清單是空的</span>`;
+  if (open) renderWatchBtn();
+}
+function renderWatchBtn() {
+  const b = $("dWatch"); b.hidden = !code || !watch || !open;
+  if (b.hidden) return;
+  const on = watching(open.c);
+  b.textContent = on ? "✓ 盤中監控中（點此移除）" : "＋ 加入盤中監控";
+  b.className = "abtn" + (on ? "" : " pri");
+}
+async function loadWatch() {
+  if (!code) { watch = null; return renderWatch(); }
+  try { watch = await api("/watch"); renderWatch(); } catch (err) { renderWatch(err.message, "err"); }
+}
+async function watchChange(body) {
+  try {
+    const r = await api("/watch", body);
+    watch = {symbols: r.symbols, max: r.max};
+    const bad = r.results.filter(x => !x.ok), good = r.results.filter(x => x.ok);
+    const removed = good.filter(x => x.msg === "已移除").map(x => x.s);
+    const txt = r.results.map(x => `${x.s}${x.n ? " " + x.n : ""}：${x.msg}`).join("、");
+    const over = watch.symbols.length > watch.max ? `　⚠ 已超過 ${watch.max} 檔上限，超出的不會檢查` : "";
+    renderWatch(txt + over, bad.length ? "err" : "ok", removed.length ? removed : null);
+  } catch (err) { renderWatch(err.message, "err"); }
+}
+$("wForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const list = $("wIn").value.toUpperCase().split(/[\s,，、]+/).filter(Boolean);
+  if (!list.length) return;
+  $("wIn").value = ""; renderWatch("處理中…"); watchChange({add: list});
+});
+$("wList").addEventListener("click", e => {
+  const rm = e.target.closest("[data-rm]"); if (rm) return watchChange({remove: [rm.dataset.rm]});
+  const c = e.target.closest("[data-c]"); if (c && all.some(r => r.c === c.dataset.c)) showK(c.dataset.c);
+});
+$("dWatch").addEventListener("click", async () => {
+  if (!open) return;
+  const b = $("dWatch"); b.disabled = true; b.textContent = "處理中…";
+  await watchChange(watching(open.c) ? {remove: [open.c]} : {add: [open.c]});
+  b.disabled = false; renderWatchBtn();
+});
+
 function hm(t) { const d = new Date(t + 8 * 3600e3); return String(d.getUTCHours()).padStart(2, "0") + ":" + String(d.getUTCMinutes()).padStart(2, "0"); }
 function renderFeed() {
   const today = feed.length;
@@ -479,7 +544,7 @@ async function loadFeed() {
 function showView(v) {
   $("alertView").hidden = v !== "alerts"; $("scanView").hidden = v === "alerts";
   $("vScan").setAttribute("aria-pressed", v !== "alerts"); $("vAlert").setAttribute("aria-pressed", v === "alerts");
-  if (v === "alerts") { renderSetup(); loadFeed(); if (location.hash !== "#alerts") history.replaceState(null, "", "#alerts"); }
+  if (v === "alerts") { renderSetup(); loadFeed(); loadWatch(); if (location.hash !== "#alerts") history.replaceState(null, "", "#alerts"); }
   else if (location.hash === "#alerts") history.replaceState(null, "", location.pathname);
 }
 $("vScan").addEventListener("click", () => showView("scan"));
@@ -496,7 +561,7 @@ if ("serviceWorker" in navigator) {
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) loadFeed(); });
 pollTimer = setInterval(() => { if (!document.hidden) loadFeed(); }, 60000);
-if (location.hash === "#alerts") showView("alerts"); else loadFeed();
+if (location.hash === "#alerts") showView("alerts"); else { loadFeed(); loadWatch(); }
 
 header(); run();
 }
