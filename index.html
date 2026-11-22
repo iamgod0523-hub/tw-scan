@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
 <title>台股收盤掃描</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#0b0f17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="台股掃描">
 <style>
 /* VOICE: 量化掃描終端機，深色、數字清楚
    IDEA: 盤後掃描器：策略按鈕 → 結果表 → K 線側板
@@ -90,6 +98,26 @@ tbody tr:hover{background:#151c2b}
 .df{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--mut)}
 .go{background:var(--acc);color:#04130d;font-weight:700;text-decoration:none;border-radius:8px;padding:11px 16px;white-space:nowrap}
 .tools{display:flex;gap:10px;margin-left:auto}
+.views{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px;width:max-content;max-width:100%;margin-bottom:16px}
+.views button{background:none;border:0;border-radius:8px;padding:10px 18px;font-size:15px;color:var(--mut);min-height:44px;position:relative}
+.views button[aria-pressed=true]{background:var(--panel2);color:var(--ink);font-weight:700}
+.dot{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:10px;background:var(--up);color:#fff;font-size:12px;line-height:20px;text-align:center}
+.acard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.acard h3{margin:0 0 6px;font-size:16px}.acard p{margin:4px 0;color:var(--mut);font-size:14px}
+.arow{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center}
+.arow input{background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink);font:inherit;font-size:16px;padding:10px 12px;min-height:44px;width:min(260px,100%)}
+.abtn{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:10px 16px;min-height:44px;font-size:14px}
+.abtn.pri{background:var(--acc);border-color:var(--acc);color:#04130d;font-weight:700}
+.amsg{font-size:13px;color:var(--mut)}.amsg.err{color:var(--up)}.amsg.ok{color:var(--acc)}
+.hint{border-left:3px solid var(--ma5);padding:8px 12px;background:#1a1710;border-radius:6px;margin-top:10px;font-size:14px;color:#e9d7a8}
+.alist{display:flex;flex-direction:column;gap:10px;margin-bottom:40px}
+.aitem{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:56px 1fr;gap:4px 12px}
+.aitem time{font-family:var(--mono);color:var(--mut);font-size:14px;padding-top:2px}
+.aitem h4{margin:0;font-size:16px}.aitem .ab{grid-column:2;font-size:14px;color:#c8cfdc;white-space:pre-line}
+.chips{grid-column:2;display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;min-height:36px}
+.chip:hover{border-color:var(--acc)}
+.aempty{padding:40px 20px;text-align:center;color:var(--mut);background:var(--panel);border:1px dashed var(--line);border-radius:12px}
 @media(max-width:700px){.nav{display:none}.tbtn span{display:none}th,td{padding:10px 8px}.hs{display:none}.cmp{grid-template-columns:1fr}}
 </style>
 </head>
@@ -109,6 +137,13 @@ tbody tr:hover{background:#151c2b}
     </div>
     <label class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="過濾代號或名稱（例如 2330）"></label>
   </div>
+  <div class="views" role="tablist"><button type="button" id="vScan" aria-pressed="true">收盤選股</button><button type="button" id="vAlert" aria-pressed="false">盤中訊息<span class="dot" id="aDot" hidden></span></button></div>
+  <section id="alertView" hidden>
+    <div class="acard" id="aSetup"></div>
+    <div class="status"><span id="aStatus"></span><button class="abtn" id="aRefresh" type="button">重新整理</button></div>
+    <div class="alist" id="aList"></div>
+  </section>
+  <div id="scanView">
   <div class="strats" id="strats" role="group" aria-label="掃描策略"></div>
   <div class="status"><span id="mode"></span><span id="excl"></span></div>
   <div class="card">
@@ -116,6 +151,7 @@ tbody tr:hover{background:#151c2b}
     <div class="empty" id="empty" hidden><b>沒有符合條件的股票</b>可以到「掃描參數設定」放寬成交量或量比。</div>
   </div>
   <button class="more" id="more" type="button" hidden>顯示更多</button>
+  </div>
 
   <div class="rules">
     <div><h3>漲跌幅排行</h3>依今日收盤與昨日收盤計算漲跌幅 <code>(收盤 − 昨收) / 昨收</code>，由大到小（跌幅榜由小到大）。</div>
@@ -251,6 +287,7 @@ function header() {
 }
 
 function pick(k) {
+  showView("scan");
   cur = STRATS.find(s => s.k === k); sortK = cur.s; sortDir = cur.dir; limit = 200;
   save("tws-strat", k); header(); run();
 }
@@ -368,6 +405,99 @@ $("shade").addEventListener("click", closeK); $("dClose").addEventListener("clic
 document.addEventListener("keydown", e => { if (e.key === "Escape") { closeK(); $("dlg").hidden = true; } });
 
 $("sub").innerHTML = D ? `已載入 <b>${all.length.toLocaleString()}</b> 檔上市股票 ・ 資料日期 ${D.date} ・ 產生於 ${D.built} ・ 資料來源：臺灣證券交易所` : "尚無資料：請先點兩下「執行選股.bat」抓取資料";
+/* ---- 盤中訊息與推播（資料來自 tw-stock-alert Worker） ---- */
+const WORKER = "https://tw-stock-alert.tw-stock-alert-worker.workers.dev";
+let code = load("tws-code", "");
+let reg = null, feed = [], feedDate = "", pollTimer = null, aMsg = "", aMsgCls = "";
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const pushOK = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+async function api(path, body) {
+  const r = await fetch(WORKER + "/api" + path, {method: body ? "POST" : "GET", headers: {"Content-Type": "application/json", "X-App-Code": code}, body: body ? JSON.stringify(body) : undefined, cache: "no-store"});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "連線失敗（HTTP " + r.status + "）");
+  return j;
+}
+const keyBytes = s => { const b = atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+function msg(t, cls = "") { aMsg = t; aMsgCls = cls; renderSetup(); }
+async function currentSub() { return reg ? reg.pushManager.getSubscription() : null; }
+async function renderSetup() {
+  const el = $("aSetup");
+  if (!code) {
+    el.innerHTML = `<h3>輸入通知密碼</h3><p>就是 Cloudflare 上 tw-stock-alert 設定的 APP_CODE，輸入一次就會記住。</p>
+<form class="arow" id="codeForm"><input id="codeIn" type="password" autocomplete="current-password" placeholder="通知密碼"><button class="abtn pri" type="submit">確認</button></form>
+<p class="amsg ${aMsgCls}">${esc(aMsg)}</p>`;
+    $("codeForm").onsubmit = async e => { e.preventDefault(); code = $("codeIn").value.trim(); try { await api("/feed"); save("tws-code", code); aMsg = ""; loadFeed(); renderSetup(); } catch (err) { code = ""; msg(err.message, "err"); } };
+    return;
+  }
+  let push = "";
+  if (isIOS && !standalone) push = `<div class="hint">iPhone 要收通知：在 Safari 按「分享」→「加入主畫面」，之後從主畫面的「台股掃描」圖示打開，再按「開啟通知」。</div>`;
+  else if (!pushOK) push = `<p>這個瀏覽器不支援推播通知，請改用 Chrome（Android）或加入主畫面的 App（iPhone）。</p>`;
+  else {
+    const sub = await currentSub();
+    const perm = Notification.permission;
+    push = perm === "denied" ? `<p>通知已被封鎖，請到手機設定裡允許「台股掃描」的通知。</p>` :
+      sub ? `<p class="amsg ok">這台裝置已開啟通知。盤中訊號約在 K 棒收完後 1 分鐘跳出。</p><div class="arow"><button class="abtn" id="pTest" type="button">傳送測試通知</button><button class="abtn" id="pOff" type="button">關閉這台的通知</button></div>`
+          : `<div class="arow"><button class="abtn pri" id="pOn" type="button">開啟通知</button></div>`;
+  }
+  el.innerHTML = `<h3>通知設定</h3>${push}<p class="amsg ${aMsgCls}">${esc(aMsg)}</p><div class="arow"><button class="abtn" id="codeReset" type="button">更改通知密碼</button></div>`;
+  $("codeReset").onclick = () => { code = ""; save("tws-code", ""); msg(""); };
+  if ($("pOn")) $("pOn").onclick = async () => {
+    try {
+      if (await Notification.requestPermission() !== "granted") throw new Error("沒有允許通知");
+      reg = reg || await navigator.serviceWorker.ready;
+      const {publicKey} = await api("/key");
+      let sub;
+      try { sub = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: keyBytes(publicKey)}); }
+      catch (err) { const old = await currentSub(); if (!old) throw err; await old.unsubscribe(); sub = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: keyBytes(publicKey)}); }
+      const r = await api("/subscribe", {sub: sub.toJSON(), ua: navigator.userAgent});
+      msg(r.ok ? "已開啟，應該馬上會收到一則「通知已開啟」。" : "已訂閱，但測試推播失敗（" + r.status + "）", r.ok ? "ok" : "err");
+    } catch (err) { msg("開啟失敗：" + err.message, "err"); }
+  };
+  if ($("pTest")) $("pTest").onclick = async () => { try { const sub = await currentSub(); const r = await api("/test", {sub: sub.toJSON()}); msg(r.ok ? "已送出測試通知。" : "推播失敗（" + r.status + "）", r.ok ? "ok" : "err"); } catch (err) { msg(err.message, "err"); } };
+  if ($("pOff")) $("pOff").onclick = async () => { try { const sub = await currentSub(); if (sub) { await api("/unsubscribe", {endpoint: sub.endpoint}).catch(() => {}); await sub.unsubscribe(); } msg("已關閉這台裝置的通知。"); } catch (err) { msg(err.message, "err"); } };
+}
+function hm(t) { const d = new Date(t + 8 * 3600e3); return String(d.getUTCHours()).padStart(2, "0") + ":" + String(d.getUTCMinutes()).padStart(2, "0"); }
+function renderFeed() {
+  const today = feed.length;
+  $("aStatus").textContent = code ? `${feedDate || "今天"}・共 ${today} 則・每分鐘自動更新` : "";
+  const seen = load("tws-seen", {});
+  const unseen = feedDate && seen.d === feedDate ? Math.max(0, today - (seen.n || 0)) : today;
+  $("aDot").hidden = !unseen || !$("alertView").hidden; $("aDot").textContent = unseen;
+  if (!$("alertView").hidden && feedDate) save("tws-seen", {d: feedDate, n: today});
+  if (!code) { $("aList").innerHTML = ""; return; }
+  $("aList").innerHTML = feed.length ? feed.map(i => `<article class="aitem"><time>${hm(i.t)}</time><h4>${esc(i.title)}</h4>
+<div class="ab">${esc(i.body.filter(l => !/^\|/.test(l)).join("\n"))}</div>
+<div class="chips">${i.symbols.map(s => `<button class="chip" type="button" data-c="${esc(s.s)}">${esc(s.s)} ${esc(s.n)}</button>`).join("")}</div></article>`).join("")
+    : `<div class="aempty">今天還沒有盤中訊息。<br>盤中（09:00–13:30）有訊號時會出現在這裡。</div>`;
+}
+async function loadFeed() {
+  if (!code) return renderFeed();
+  try { const j = await api("/feed"); feed = j.items || []; feedDate = j.date; } catch (err) { $("aStatus").textContent = err.message; return; }
+  renderFeed();
+}
+function showView(v) {
+  $("alertView").hidden = v !== "alerts"; $("scanView").hidden = v === "alerts";
+  $("vScan").setAttribute("aria-pressed", v !== "alerts"); $("vAlert").setAttribute("aria-pressed", v === "alerts");
+  if (v === "alerts") { renderSetup(); loadFeed(); if (location.hash !== "#alerts") history.replaceState(null, "", "#alerts"); }
+  else if (location.hash === "#alerts") history.replaceState(null, "", location.pathname);
+}
+$("vScan").addEventListener("click", () => showView("scan"));
+$("vAlert").addEventListener("click", () => showView("alerts"));
+$("aRefresh").addEventListener("click", loadFeed);
+$("aList").addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  if (all.some(r => r.c === b.dataset.c)) showK(b.dataset.c);
+  else window.open(`https://tw.stock.yahoo.com/quote/${b.dataset.c}.TW/technical-analysis`, "_blank", "noopener");
+});
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").then(r => { reg = r; if (!$("alertView").hidden) renderSetup(); }).catch(() => {});
+  navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.type === "open-alerts") showView("alerts"); });
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadFeed(); });
+pollTimer = setInterval(() => { if (!document.hidden) loadFeed(); }, 60000);
+if (location.hash === "#alerts") showView("alerts"); else loadFeed();
+
 header(); run();
 }
 </script>
