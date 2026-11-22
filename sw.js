@@ -5,7 +5,7 @@ self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data ? e.data.text() : "" }; }
-  e.waitUntil(self.registration.showNotification(d.title || "盤中訊息", {
+  e.waitUntil(self.registration.showNotification(d.title || "選股雷達", {
     body: d.body || "",
     tag: d.tag || "tws",
     icon: "icon-192.png",
