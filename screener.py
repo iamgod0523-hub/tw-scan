@@ -237,7 +237,9 @@ def write_data(last_date, rows, dates, fdates):
 
 
 def github_upload():
-    """把網頁（存成 index.html）和 data.js 上傳到 GitHub，手機開 GitHub Pages 網址即可看"""
+    """把 data.js 上傳到 GitHub（網站會自動更新）。
+    網頁檔現在直接在 GitHub 上維護，預設不上傳，避免電腦裡的舊版蓋掉新版；
+    真的要用電腦裡的網頁覆蓋時，加 --with-page。"""
     if not os.path.exists(GH_CFG):
         print("\n（沒有 github.json，略過上傳。要用手機看請照說明設定）")
         return
@@ -254,8 +256,9 @@ def github_upload():
             return json.loads(r.read().decode() or "{}")
 
     print("\n上傳到 GitHub…")
-    files = [(PAGE, "index.html"), (DATA_JS, "data.js")] + \
-        [(os.path.join(BASE, n), n) for n in APP_FILES]
+    files = [(DATA_JS, "data.js")]
+    if "--with-page" in sys.argv:
+        files = [(PAGE, "index.html")] + files + [(os.path.join(BASE, n), n) for n in APP_FILES]
     for local, remote in files:
         if not os.path.exists(local):
             continue
