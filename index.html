@@ -181,7 +181,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   </section>
   <div id="scanView">
   <div class="cats" role="tablist" id="cats"><button type="button" data-cat="filter">自訂篩選</button><button type="button" data-cat="boll">布林上軌突破</button></div>
-  <div class="cdesc" id="cBoll" hidden><b>布林上軌突破</b>：昨天收盤在布林上軌之下，今天收盤站上布林上軌。布林通道用 20 日均線 ± 2 倍標準差，以收盤價計算。這個分類不套用自訂篩選的條件。</div>
+  <div class="cdesc" id="cBoll" hidden><b>布林上軌突破</b>：昨天收盤在布林上軌之下，今天收盤站上布林上軌。布林通道用 20 日均線 ± 2 倍標準差，以收盤價計算。這個分類不含 ETF，也不套用自訂篩選的條件。</div>
   <details class="fpanel" id="fp" open>
     <summary>篩選條件<small id="fsum"></small></summary>
     <div class="fbody">
@@ -209,10 +209,10 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   </div>
   <button class="more" id="more" type="button" hidden>顯示更多</button>
   <div class="rules">
-    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。分類不套用自訂篩選的條件，選了會記住。</div>
+    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。</div>
     <div><h3>自訂篩選</h3>設定好條件後按「開始篩選」。每個條件都是「而且」：要同時符合所有有設定的條件才會列出。留空或選「不限」就是不篩這一項。條件會自動記住。點表頭可以排序。</div>
     <div><h3>月線</h3>月線＝近 20 日收盤平均。今日突破：<code>昨收 ≤ 昨日月線</code> 且 <code>今收 &gt; 今日月線</code>；跌破相反。量比＝今日量 ÷ 前 5 日均量。</div>
-    <div><h3>三大法人</h3>只有上櫃股票有資料（證交所 OpenAPI 沒有上市個股法人資料，上市股票顯示「—」）。法人佔量＝三大法人買賣超張數 ÷ 當日成交量。</div>
+    <div><h3>三大法人</h3>只有上櫃股票有資料（證交所 OpenAPI 沒有上市個股法人資料，上市股票顯示「—」）。</div>
     <div><h3>排除條件</h3>權值股依市值排名（收盤價 × 已發行股數）。資料：上市取自臺灣證券交易所每日收盤行情，每天約 18:00 更新；上櫃與發行股數取自證交所、櫃買中心官方 OpenAPI，每天約 18:00～21:00 更新（股票名稱旁標「櫃」的是上櫃，標「前日」表示櫃買中心還沒更新當天資料）。族群依自建的族群對照表，一檔可屬多個族群；點表格或 K 線側板裡的族群標籤，會列出同族群的所有股票。僅供參考，非投資建議。</div>
   </div>
   </div>
@@ -242,15 +242,16 @@ const DEF = {vol:500, ratio:2, pmin:"", pmax:"", chmin:"", chmax:"", ma20:"above
 const CLEAR = {...Object.fromEntries(Object.keys(DEF).map(k => [k, ""])), noetf:true, nobig:true, bign:50};
 const COLS = [
   {k:"i", t:"排名", l:1, ns:1}, {k:"c", t:"股票", l:1}, {k:"g", t:"族群", l:1, ns:1}, {k:"p", t:"收盤"}, {k:"ch", t:"漲跌%"},
-  {k:"v", t:"成交量(張)"}, {k:"r", t:"量比"}, {k:"fi", t:"法人買賣超(張)"}, {k:"fr", t:"法人佔量%"},
-  {k:"d", t:"距月線%", h:1}, {k:"x", t:"圖表診斷", ns:1}
+  {k:"v", t:"成交量(張)"}, {k:"r", t:"量比"}, {k:"fi", t:"法人買賣超(張)"},
+  {k:"x", t:"圖表診斷", ns:1}
 ];
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 let F = {...DEF, ...load("tws-filter", {})}; for (const k in F) if (!(k in DEF)) delete F[k];
 let ran = false, grp = "", cat = load("tws-cat", "filter") === "boll" ? "boll" : "filter";
-const CATS = {boll: {name: "布林上軌突破", test: x => x.bu}};
-let sortK = load("tws-sort", "r"), sortDir = load("tws-dir", "desc"), limit = 200, rows = [];
+const CATS = {boll: {name: "布林上軌突破", test: x => x.bu && !x.etf}};
+let sortK = load("tws-sort", "r"); if (!COLS.some(c => c.k === sortK && !c.ns)) sortK = "r";
+let sortDir = load("tws-dir", "desc"), limit = 200, rows = [];
 /* 由原始日 K 計算指標（改條件只要更新這個網頁，不必重跑 bat） */
 const avg = a => a.reduce((s, v) => s + v, 0) / a.length;
 const r2 = n => Math.round(n * 100) / 100;
@@ -345,8 +346,7 @@ function render() {
 <td class="grp">${x.g.length ? chips(x.g) : "—"}</td>
 <td class="${sg(x.ch)}">${f2(x.p)}</td><td class="${sg(x.ch)}">${pct(x.ch)}</td>
 <td>${x.v.toLocaleString()}</td><td>${f2(x.r)}</td>
-<td class="${sg(x.fi)}">${x.fi == null ? "—" : (x.fi > 0 ? "+" : "") + x.fi.toLocaleString()}</td><td class="${sg(x.fr)}">${x.fr == null ? "—" : pct(x.fr)}</td>
-<td class="${sg(x.d)} hs">${pct(x.d)}</td>
+<td class="${sg(x.fi)}">${x.fi == null ? "—" : (x.fi > 0 ? "+" : "") + x.fi.toLocaleString()}</td>
 <td><button class="kbtn" type="button" data-c="${x.c}">📈 K線指標</button></td></tr>`).join("");
 }
 
