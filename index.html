@@ -167,6 +167,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   <section id="alertView" hidden>
     <div class="acard" id="aSetup"></div>
     <div class="status"><span id="aStatus"></span><button class="abtn" id="aRefresh" type="button">重新整理</button></div>
+    <div class="cats" id="aCats" hidden></div>
     <div class="alist" id="aList"></div>
   </section>
   <section id="watchView" hidden>
@@ -590,6 +591,13 @@ function feedBody(lines) {
   }
   return out;
 }
+/* 盤中訊息分類：依通知標題判斷屬於哪一種 */
+const ATYPES = [
+  {k: "rebound", name: "低點反彈", re: /低點反彈|5穿20/}, {k: "hi", name: "突破昨日高點", re: /突破昨日高點|突破前高/},
+  {k: "lo", name: "跌破昨日低點", re: /跌破昨日低點|跌破前低/}, {k: "ma20", name: "跌破20MA", re: /跌破20MA/i},
+  {k: "vol", name: "60分K爆量", re: /爆量/}, {k: "black", name: "黑飛型態", re: /黑飛/}];
+const aType = title => { const t = String(title).replace(/\s+/g, ""); return (ATYPES.find(x => x.re.test(t)) || {k: "other"}).k; };
+let aCat = load("tws-acat", "all");
 function renderFeed() {
   const today = feed.length;
   $("aStatus").textContent = code ? `${feedDate || "今天"}・共 ${today} 則・每分鐘自動更新` : "";
@@ -597,9 +605,17 @@ function renderFeed() {
   const unseen = feedDate && seen.d === feedDate ? Math.max(0, today - (seen.n || 0)) : today;
   $("aDot").hidden = !unseen || !$("alertView").hidden; $("aDot").textContent = unseen;
   if (!$("alertView").hidden && feedDate) save("tws-seen", {d: feedDate, n: today});
+  $("aCats").hidden = !code;
   if (!code) { $("aList").innerHTML = ""; return; }
-  $("aList").innerHTML = feed.length ? feed.map(i => `<article class="aitem"><time>${hm(i.t)}</time><h4>${esc(i.title)}</h4>
+  const n = k => k === "all" ? feed.length : feed.filter(i => aType(i.title) === k).length;
+  const keys = ["all", ...ATYPES.map(t => t.k), ...(n("other") ? ["other"] : [])];
+  if (!keys.includes(aCat)) aCat = "all";
+  $("aCats").innerHTML = keys.map(k => `<button type="button" data-a="${k}" aria-pressed="${k === aCat}">${k === "all" ? "全部" : k === "other" ? "其他" : ATYPES.find(t => t.k === k).name} ${n(k)}</button>`).join("");
+  const list = aCat === "all" ? feed : feed.filter(i => aType(i.title) === aCat);
+  const name = aCat === "all" ? "" : aCat === "other" ? "其他" : ATYPES.find(t => t.k === aCat).name;
+  $("aList").innerHTML = list.length ? list.map(i => `<article class="aitem"><time>${hm(i.t)}</time><h4>${esc(i.title)}</h4>
 <div class="ab">${feedBody(i.body)}</div></article>`).join("")
+    : name ? `<div class="aempty">今天還沒有「${esc(name)}」通知。</div>`
     : `<div class="aempty">今天還沒有盤中訊息。<br>盤中（09:00–13:30）有訊號時會出現在這裡。</div>`;
 }
 async function loadFeed() {
@@ -620,6 +636,7 @@ $("vAlert").addEventListener("click", () => showView("alerts"));
 $("vWatch").addEventListener("click", () => showView("watch"));
 $("wGo").addEventListener("click", () => showView("alerts"));
 $("aRefresh").addEventListener("click", loadFeed);
+$("aCats").addEventListener("click", e => { const b = e.target.closest("button[data-a]"); if (!b) return; aCat = b.dataset.a; save("tws-acat", aCat); renderFeed(); });
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").then(r => { reg = r; if (!$("alertView").hidden) renderSetup(); }).catch(() => {});
   navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.type === "open-alerts") showView("alerts"); });
