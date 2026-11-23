@@ -187,8 +187,8 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
     </div>
   </section>
   <div id="scanView">
-  <div class="cats" role="tablist" id="cats"><button type="button" data-cat="filter">自訂篩選</button><button type="button" data-cat="boll">布林上軌突破</button></div>
-  <div class="cdesc" id="cBoll" hidden><b>布林上軌突破</b>：昨天收盤在布林上軌之下，今天收盤站上布林上軌。布林通道用 20 日均線 ± 2 倍標準差，以收盤價計算。這個分類不含 ETF，也不套用自訂篩選的條件。</div>
+  <div class="cats" role="tablist" id="cats"><button type="button" data-cat="filter">自訂篩選</button><button type="button" data-cat="boll">布林上軌突破</button><button type="button" data-cat="up">當日漲幅榜</button><button type="button" data-cat="dn">當日跌幅榜</button><button type="button" data-cat="hot">熱門股</button></div>
+  <div class="cdesc" id="cDesc" hidden></div>
   <details class="fpanel" id="fp" open>
     <summary>篩選條件<small id="fsum"></small></summary>
     <div class="fbody">
@@ -216,7 +216,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   </div>
   <button class="more" id="more" type="button" hidden>顯示更多</button>
   <div class="rules">
-    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。</div>
+    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。<b>當日漲幅榜／跌幅榜</b>：漲跌幅最大的前 50 檔。<b>熱門股</b>：成交值（收盤價 × 成交量）最大的前 50 檔，表格的「成交值」單位是億元。三個排行榜不含標「前日」、還沒更新到當天的上櫃股票。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。</div>
     <div><h3>自訂篩選</h3>設定好條件後按「開始篩選」。每個條件都是「而且」：要同時符合所有有設定的條件才會列出。留空或選「不限」就是不篩這一項。條件會自動記住。點表頭可以排序。</div>
     <div><h3>月線</h3>月線＝近 20 日收盤平均。今日突破：<code>昨收 ≤ 昨日月線</code> 且 <code>今收 &gt; 今日月線</code>；跌破相反。量比＝今日量 ÷ 前 5 日均量。</div>
     <div><h3>三大法人</h3>只有上櫃股票有資料（證交所 OpenAPI 沒有上市個股法人資料，上市股票顯示「—」）。</div>
@@ -249,14 +249,22 @@ const DEF = {vol:500, ratio:2, pmin:"", pmax:"", chmin:"", chmax:"", ma20:"above
 const CLEAR = {...Object.fromEntries(Object.keys(DEF).map(k => [k, ""])), noetf:true, nobig:true, bign:50};
 const COLS = [
   {k:"i", t:"排名", l:1, ns:1}, {k:"c", t:"股票", l:1}, {k:"g", t:"族群", l:1, ns:1}, {k:"p", t:"收盤"}, {k:"ch", t:"漲跌%"},
-  {k:"v", t:"成交量(張)"}, {k:"r", t:"量比"}, {k:"fi", t:"法人買賣超(張)"},
+  {k:"v", t:"成交量(張)"}, {k:"amt", t:"成交值(億)"}, {k:"r", t:"量比"}, {k:"fi", t:"法人買賣超(張)"},
   {k:"x", t:"圖表診斷", ns:1}
 ];
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 let F = {...DEF, ...load("tws-filter", {})}; for (const k in F) if (!(k in DEF)) delete F[k];
-let ran = false, grp = "", cat = load("tws-cat", "filter") === "boll" ? "boll" : "filter";
-const CATS = {boll: {name: "布林上軌突破", test: x => x.bu && !x.etf}};
+const CATS = {
+  boll: {name: "布林上軌突破", test: x => x.bu && !x.etf,
+    desc: "<b>布林上軌突破</b>：昨天收盤在布林上軌之下，今天收盤站上布林上軌。布林通道用 20 日均線 ± 2 倍標準差，以收盤價計算。"},
+  up: {name: "當日漲幅榜", test: x => !x.etf && !x.lag && x.ch > 0, sort: ["ch", "desc"], top: 50,
+    desc: "<b>當日漲幅榜</b>：今天漲幅最大的前 50 檔。"},
+  dn: {name: "當日跌幅榜", test: x => !x.etf && !x.lag && x.ch < 0, sort: ["ch", "asc"], top: 50,
+    desc: "<b>當日跌幅榜</b>：今天跌幅最大的前 50 檔。"},
+  hot: {name: "熱門股", test: x => !x.etf && !x.lag, sort: ["amt", "desc"], top: 50,
+    desc: "<b>熱門股</b>：今天成交值（收盤價 × 成交量）最大的前 50 檔。"}};
+let ran = false, grp = "", cat = load("tws-cat", "filter"); if (!CATS[cat]) cat = "filter";
 let sortK = load("tws-sort", "r"); if (!COLS.some(c => c.k === sortK && !c.ns)) sortK = "r";
 let sortDir = load("tws-dir", "desc"), limit = 200, rows = [];
 /* 由原始日 K 計算指標（改條件只要更新這個網頁，不必重跑 bat） */
@@ -273,7 +281,7 @@ function calc(raw) {
   const sd = a => { const m = avg(a); return Math.sqrt(avg(a.map(x => (x - m) ** 2))); };
   const up = m20 + 2 * sd(c21.slice(1)), upp = m20p + 2 * sd(c21.slice(0, 20));
   return {c: raw.c, n: raw.n, k: K, p, pv, up: r2(up), bu: pv <= upp && p > up, m60, m60p, ch: r2((p / pv - 1) * 100), v: v6[5], r: a5 ? r2(v6[5] / a5) : 0,
-    m5: r2(m5), m5p: r2(m5p), m20: r2(m20), m20p: r2(m20p), d: r2((p / m20 - 1) * 100),
+    m5: r2(m5), m5p: r2(m5p), m20: r2(m20), m20p: r2(m20p), amt: r2(p * v6[5] / 1e5), d: r2((p / m20 - 1) * 100),
     gap: r2((m5 / m20 - 1) * 100), mc: raw.sh ? Math.round(p * raw.sh / 1e8) : null, etf: !/^[1-9]\d{3}$/.test(raw.c), otc: raw.m === "o", lag: raw.e || 0, g: (window.TWS_GROUPS || {})[raw.c] || [],
     ...inst(raw, v6[5])};
 }
@@ -326,7 +334,9 @@ function run() {
   const q = $("q").value.trim();
   const hit = x => x.c.includes(q) || x.n.includes(q) || x.g.some(g => g.includes(q));
   const C = CATS[cat];
-  rows = grp ? all.filter(x => x.g.includes(grp)) : C ? all.filter(x => C.test(x) && (!q || hit(x))) : ran ? all.filter(x => pass(x) && (!q || hit(x))) : q ? all.filter(hit) : [];
+  let pool = all;
+  if (C && C.top) { const [sk, sd] = C.sort, sm = sd === "asc" ? 1 : -1; pool = all.filter(C.test).sort((a, b) => (a[sk] - b[sk]) * sm).slice(0, C.top); }
+  rows = grp ? all.filter(x => x.g.includes(grp)) : C ? pool.filter(x => C.test(x) && (!q || hit(x))) : ran ? all.filter(x => pass(x) && (!q || hit(x))) : q ? all.filter(hit) : [];
   const m = sortDir === "asc" ? 1 : -1, k = sortK;
   rows.sort((a, b) => (k === "c" ? a.c.localeCompare(b.c) : (a[k] ?? -1e9) - (b[k] ?? -1e9)) * m);
   const {cond, ex} = summary();
@@ -352,7 +362,7 @@ function render() {
 <td class="l sym"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c} ↗</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}${x.lag ? '<span class="otc" title="櫃買中心尚未更新最新一天，顯示的是前一個交易日">前日</span>' : ""}</td>
 <td class="grp">${x.g.length ? chips(x.g) : "—"}</td>
 <td class="${sg(x.ch)}">${f2(x.p)}</td><td class="${sg(x.ch)}">${pct(x.ch)}</td>
-<td>${x.v.toLocaleString()}</td><td>${f2(x.r)}</td>
+<td>${x.v.toLocaleString()}</td><td>${f2(x.amt)}</td><td>${f2(x.r)}</td>
 <td class="${sg(x.fi)}">${x.fi == null ? "—" : (x.fi > 0 ? "+" : "") + x.fi.toLocaleString()}</td>
 <td><button class="kbtn" type="button" data-c="${x.c}">📈 K線指標</button></td></tr>`).join("");
 }
@@ -461,7 +471,11 @@ $("fp").addEventListener("toggle", () => save("tws-fp-closed", !$("fp").open));
 function setCat(c) {
   cat = c; save("tws-cat", c); grp = ""; limit = 200;
   for (const b of $("cats").children) b.setAttribute("aria-pressed", b.dataset.cat === c);
-  $("fp").hidden = c !== "filter"; $("cBoll").hidden = c !== "boll";
+  $("fp").hidden = c !== "filter";
+  const C = CATS[c]; $("cDesc").hidden = !C; if (C) $("cDesc").innerHTML = C.desc + "這個分類不含 ETF，也不套用自訂篩選的條件。";
+  if (C && C.sort) [sortK, sortDir] = C.sort;
+  else { sortK = load("tws-sort", "r"); if (!COLS.some(x => x.k === sortK && !x.ns)) sortK = "r"; sortDir = load("tws-dir", "desc"); }
+  header();
 }
 $("cats").addEventListener("click", e => { const b = e.target.closest("button[data-cat]"); if (b) { setCat(b.dataset.cat); run(); } });
 setCat(cat);
