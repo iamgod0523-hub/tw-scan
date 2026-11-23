@@ -116,6 +116,11 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .df{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--mut)}
 .go{background:var(--acc);color:#04130d;font-weight:700;text-decoration:none;border-radius:8px;padding:11px 16px;white-space:nowrap}
 .tools{display:flex;gap:10px;margin-left:auto}
+.cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.cats button{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:14px;color:var(--mut);min-height:40px}
+.cats button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:700}
+.cdesc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:14px;line-height:1.6;color:var(--mut)}
+.cdesc b{color:var(--ink)}
 .views{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px;width:max-content;max-width:100%;margin-bottom:16px}
 .views button{background:none;border:0;border-radius:8px;padding:10px 18px;font-size:15px;color:var(--mut);min-height:44px;position:relative}
 .views button[aria-pressed=true]{background:var(--panel2);color:var(--ink);font-weight:700}
@@ -175,6 +180,8 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
     </div>
   </section>
   <div id="scanView">
+  <div class="cats" role="tablist" id="cats"><button type="button" data-cat="filter">自訂篩選</button><button type="button" data-cat="boll">布林上軌突破</button></div>
+  <div class="cdesc" id="cBoll" hidden><b>布林上軌突破</b>：昨天收盤在布林上軌之下，今天收盤站上布林上軌。布林通道用 20 日均線 ± 2 倍標準差，以收盤價計算。這個分類不套用自訂篩選的條件。</div>
   <details class="fpanel" id="fp" open>
     <summary>篩選條件<small id="fsum"></small></summary>
     <div class="fbody">
@@ -202,7 +209,8 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   </div>
   <button class="more" id="more" type="button" hidden>顯示更多</button>
   <div class="rules">
-    <div><h3>篩選方式</h3>設定好條件後按「開始篩選」。每個條件都是「而且」：要同時符合所有有設定的條件才會列出。留空或選「不限」就是不篩這一項。條件會自動記住。點表頭可以排序。</div>
+    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。分類不套用自訂篩選的條件，選了會記住。</div>
+    <div><h3>自訂篩選</h3>設定好條件後按「開始篩選」。每個條件都是「而且」：要同時符合所有有設定的條件才會列出。留空或選「不限」就是不篩這一項。條件會自動記住。點表頭可以排序。</div>
     <div><h3>月線</h3>月線＝近 20 日收盤平均。今日突破：<code>昨收 ≤ 昨日月線</code> 且 <code>今收 &gt; 今日月線</code>；跌破相反。量比＝今日量 ÷ 前 5 日均量。</div>
     <div><h3>三大法人</h3>只有上櫃股票有資料（證交所 OpenAPI 沒有上市個股法人資料，上市股票顯示「—」）。法人佔量＝三大法人買賣超張數 ÷ 當日成交量。</div>
     <div><h3>排除條件</h3>權值股依市值排名（收盤價 × 已發行股數）。資料：上市取自臺灣證券交易所每日收盤行情，每天約 18:00 更新；上櫃與發行股數取自證交所、櫃買中心官方 OpenAPI，每天約 18:00～21:00 更新（股票名稱旁標「櫃」的是上櫃，標「前日」表示櫃買中心還沒更新當天資料）。族群依自建的族群對照表，一檔可屬多個族群；點表格或 K 線側板裡的族群標籤，會列出同族群的所有股票。僅供參考，非投資建議。</div>
@@ -240,7 +248,8 @@ const COLS = [
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 let F = {...DEF, ...load("tws-filter", {})}; for (const k in F) if (!(k in DEF)) delete F[k];
-let ran = false, grp = "";
+let ran = false, grp = "", cat = load("tws-cat", "filter") === "boll" ? "boll" : "filter";
+const CATS = {boll: {name: "布林上軌突破", test: x => x.bu}};
 let sortK = load("tws-sort", "r"), sortDir = load("tws-dir", "desc"), limit = 200, rows = [];
 /* 由原始日 K 計算指標（改條件只要更新這個網頁，不必重跑 bat） */
 const avg = a => a.reduce((s, v) => s + v, 0) / a.length;
@@ -253,7 +262,9 @@ function calc(raw) {
   const m5 = avg(c21.slice(-5)), m5p = avg(c21.slice(-6, -1)), a5 = avg(v6.slice(0, 5));
   const c61 = c.slice(-61), ok60 = c61.length === 61 && !c61.includes(null);
   const m60 = ok60 ? avg(c61.slice(1)) : null, m60p = ok60 ? avg(c61.slice(0, 60)) : null;
-  return {c: raw.c, n: raw.n, k: K, p, pv, m60, m60p, ch: r2((p / pv - 1) * 100), v: v6[5], r: a5 ? r2(v6[5] / a5) : 0,
+  const sd = a => { const m = avg(a); return Math.sqrt(avg(a.map(x => (x - m) ** 2))); };
+  const up = m20 + 2 * sd(c21.slice(1)), upp = m20p + 2 * sd(c21.slice(0, 20));
+  return {c: raw.c, n: raw.n, k: K, p, pv, up: r2(up), bu: pv <= upp && p > up, m60, m60p, ch: r2((p / pv - 1) * 100), v: v6[5], r: a5 ? r2(v6[5] / a5) : 0,
     m5: r2(m5), m5p: r2(m5p), m20: r2(m20), m20p: r2(m20p), d: r2((p / m20 - 1) * 100),
     gap: r2((m5 / m20 - 1) * 100), mc: raw.sh ? Math.round(p * raw.sh / 1e8) : null, etf: !/^[1-9]\d{3}$/.test(raw.c), otc: raw.m === "o", lag: raw.e || 0, g: (window.TWS_GROUPS || {})[raw.c] || [],
     ...inst(raw, v6[5])};
@@ -306,13 +317,14 @@ function summary() {
 function run() {
   const q = $("q").value.trim();
   const hit = x => x.c.includes(q) || x.n.includes(q) || x.g.some(g => g.includes(q));
-  rows = grp ? all.filter(x => x.g.includes(grp)) : ran ? all.filter(x => pass(x) && (!q || hit(x))) : q ? all.filter(hit) : [];
+  const C = CATS[cat];
+  rows = grp ? all.filter(x => x.g.includes(grp)) : C ? all.filter(x => C.test(x) && (!q || hit(x))) : ran ? all.filter(x => pass(x) && (!q || hit(x))) : q ? all.filter(hit) : [];
   const m = sortDir === "asc" ? 1 : -1, k = sortK;
   rows.sort((a, b) => (k === "c" ? a.c.localeCompare(b.c) : (a[k] ?? -1e9) - (b[k] ?? -1e9)) * m);
   const {cond, ex} = summary();
   $("fsum").textContent = cond.length ? cond.join("・") : "未設定條件";
-  $("mode").innerHTML = grp ? `族群「${esc(grp)}」共 <b>${rows.length}</b> 檔（不套用篩選條件）<button class="gback" id="gBack" type="button">✕ 返回</button>` : ran ? `符合條件 <b>${rows.length}</b> 檔` : q ? `搜尋「${esc(q)}」<b>${rows.length}</b> 檔` : "尚未篩選";
-  $("excl").textContent = !grp && ex.length ? "排除 " + ex.join("、") : "";
+  $("mode").innerHTML = grp ? `族群「${esc(grp)}」共 <b>${rows.length}</b> 檔（不套用篩選條件）<button class="gback" id="gBack" type="button">✕ 返回</button>` : C ? `${C.name}${q ? `・搜尋「${esc(q)}」` : ""} <b>${rows.length}</b> 檔` : ran ? `符合條件 <b>${rows.length}</b> 檔` : q ? `搜尋「${esc(q)}」<b>${rows.length}</b> 檔` : "尚未篩選";
+  $("excl").textContent = !grp && !C && ex.length ? "排除 " + ex.join("、") : "";
   if (grp) $("gBack").onclick = () => { grp = ""; run(); };
   render();
 }
@@ -324,7 +336,7 @@ function showGroup(name) {
 }
 
 function render() {
-  $("idle").hidden = ran || !!grp || !!$("q").value.trim();
+  $("idle").hidden = ran || !!grp || !!CATS[cat] || !!$("q").value.trim();
   $("empty").hidden = rows.length > 0 || !$("idle").hidden;
   $("more").hidden = rows.length <= limit;
   $("tb").innerHTML = rows.slice(0, limit).map((x, i) => `<tr>
@@ -437,6 +449,15 @@ $("fClear").addEventListener("click", () => { fill(CLEAR); readF(); });
 $("fGo").addEventListener("click", () => { readF(); ran = true; grp = ""; limit = 200; run(); $("mode").scrollIntoView({behavior: "smooth", block: "start"}); });
 if (matchMedia("(max-width:700px)").matches && load("tws-fp-closed", false)) $("fp").open = false;
 $("fp").addEventListener("toggle", () => save("tws-fp-closed", !$("fp").open));
+
+/* ---- 分類 ---- */
+function setCat(c) {
+  cat = c; save("tws-cat", c); grp = ""; limit = 200;
+  for (const b of $("cats").children) b.setAttribute("aria-pressed", b.dataset.cat === c);
+  $("fp").hidden = c !== "filter"; $("cBoll").hidden = c !== "boll";
+}
+$("cats").addEventListener("click", e => { const b = e.target.closest("button[data-cat]"); if (b) { setCat(b.dataset.cat); run(); } });
+setCat(cat);
 
 /* ---- 事件 ---- */
 $("q").addEventListener("input", () => { limit = 200; grp = ""; run(); });
