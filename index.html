@@ -16,9 +16,9 @@
 /* VOICE: 量化掃描終端機，深色、數字清楚
    IDEA: 盤後掃描器：策略按鈕 → 結果表 → K 線側板
    PICTURE: 結果表與 K 線圖本身
-   COLOUR/TYPE: 米色淺灰底、白色卡片，墨綠為操作色；台股慣例紅漲綠跌；系統中文字型＋等寬數字
+   COLOUR/TYPE: 米色淺灰底、象牙色卡片，墨綠為操作色；台股慣例紅漲綠跌；系統中文字型＋等寬數字
    LAYOUT: 頂列導覽、大標題、策略按鈕列、表格、右側抽屜 */
-:root{color-scheme:light;--bg:#f4f1ea;--panel:#ffffff;--panel2:#f2eee6;--line:#e1dbcf;--ink:#22262c;--mut:#6c7079;--acc:#0e8a5f;--accbg:#e2f3eb;--up:#d22f45;--dn:#0e8a5f;--ma5:#d08a00;--ma20:#1f6fd1;--ma60:#8b46c9;--soft:#3e444e;--mono:ui-monospace,"Cascadia Mono",Consolas,monospace}
+:root{color-scheme:light;--bg:#f4f1ea;--panel:#faf7f0;--panel2:#efeae0;--line:#e1dbcf;--ink:#22262c;--mut:#6c7079;--acc:#0e8a5f;--accbg:#e2f3eb;--up:#d22f45;--dn:#0e8a5f;--ma5:#d08a00;--ma20:#1f6fd1;--ma60:#8b46c9;--soft:#3e444e;--mono:ui-monospace,"Cascadia Mono",Consolas,monospace}
 *{box-sizing:border-box;min-width:0}[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif}
 button{font:inherit;color:inherit;cursor:pointer}
@@ -60,7 +60,7 @@ th{font-size:12px;color:var(--mut);font-weight:600;background:var(--panel2);curs
 th[data-dir]::after{content:" ▾"}th[data-dir=asc]::after{content:" ▴"}
 th.l,td.l{text-align:left}
 td{font-family:var(--mono);font-size:14px}
-tbody tr:hover{background:#faf8f3}
+tbody tr:hover{background:#f3eee4}
 .sym{font-family:"Microsoft JhengHei",system-ui,sans-serif;font-weight:700}
 .sym a{color:var(--ink);text-decoration:none}.sym a:hover{color:var(--acc)}
 .sym small{color:var(--mut);font-weight:400;margin-left:6px;font-size:13px}
