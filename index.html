@@ -136,7 +136,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .alist{display:flex;flex-direction:column;gap:10px;margin-bottom:40px}
 .aitem{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:56px 1fr;gap:4px 12px}
 .aitem time{font-family:var(--mono);color:var(--mut);font-size:14px;padding-top:2px}
-.aitem h4{margin:0;font-size:16px}.aitem .ab{grid-column:2;font-size:14px;color:var(--soft);white-space:pre-line}
+.aitem h4{margin:0;font-size:16px}.aitem .ab{grid-column:2;font-size:14px;color:var(--soft);margin-top:4px}.aln{padding:2px 0;line-height:1.5}.aln b{color:var(--ink);font-weight:600}.aln.sub{padding-left:1.2em;color:var(--mut);font-size:13px}
 .chips{grid-column:2;display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;min-height:36px}
 .chip:hover{border-color:var(--acc)}
@@ -578,6 +578,18 @@ $("dWatch").addEventListener("click", async () => {
 });
 
 function hm(t) { const d = new Date(t + 8 * 3600e3); return String(d.getUTCHours()).padStart(2, "0") + ":" + String(d.getUTCMinutes()).padStart(2, "0"); }
+/* 通知內文轉純文字：每檔股票一行「代號 名稱　細節」，緊接在後的補充行（例如開盤價、收盤價）縮排在那檔底下 */
+const EMOJI = /[\u{1F300}-\u{1FAFF}\u2600-\u27BF\uFE0F\u25FC\u25AA]/gu;
+function feedBody(lines) {
+  let out = "", under = false;
+  for (const raw of lines) {
+    const l = raw.replace(EMOJI, "").replace(/\s+/g, " ").trim(); if (!l) continue;
+    const m = l.match(/^\|\s*([0-9A-Z]{4,6})(?:\s+([^|]+?))?\s*\|\s*(.*)$/);
+    if (m) { out += `<div class="aln"><b>${esc(m[1])}${m[2] ? " " + esc(m[2]) : ""}</b>${m[3] ? "　" + esc(m[3].replace(/\s*\|\s*$/, "")) : ""}</div>`; under = true; }
+    else out += `<div class="aln${under ? " sub" : ""}">${esc(l)}</div>`;
+  }
+  return out;
+}
 function renderFeed() {
   const today = feed.length;
   $("aStatus").textContent = code ? `${feedDate || "今天"}・共 ${today} 則・每分鐘自動更新` : "";
@@ -587,8 +599,7 @@ function renderFeed() {
   if (!$("alertView").hidden && feedDate) save("tws-seen", {d: feedDate, n: today});
   if (!code) { $("aList").innerHTML = ""; return; }
   $("aList").innerHTML = feed.length ? feed.map(i => `<article class="aitem"><time>${hm(i.t)}</time><h4>${esc(i.title)}</h4>
-<div class="ab">${esc(i.body.filter(l => !/^\|/.test(l)).join("\n"))}</div>
-<div class="chips">${i.symbols.map(s => `<button class="chip" type="button" data-c="${esc(s.s)}">${esc(s.s)} ${esc(s.n)}</button>`).join("")}</div></article>`).join("")
+<div class="ab">${feedBody(i.body)}</div></article>`).join("")
     : `<div class="aempty">今天還沒有盤中訊息。<br>盤中（09:00–13:30）有訊號時會出現在這裡。</div>`;
 }
 async function loadFeed() {
@@ -609,11 +620,6 @@ $("vAlert").addEventListener("click", () => showView("alerts"));
 $("vWatch").addEventListener("click", () => showView("watch"));
 $("wGo").addEventListener("click", () => showView("alerts"));
 $("aRefresh").addEventListener("click", loadFeed);
-$("aList").addEventListener("click", e => {
-  const b = e.target.closest(".chip"); if (!b) return;
-  if (all.some(r => r.c === b.dataset.c)) showK(b.dataset.c);
-  else window.open(`https://tw.stock.yahoo.com/quote/${b.dataset.c}.TW/technical-analysis`, "_blank", "noopener");
-});
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").then(r => { reg = r; if (!$("alertView").hidden) renderSetup(); }).catch(() => {});
   navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.type === "open-alerts") showView("alerts"); });
