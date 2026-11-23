@@ -204,8 +204,8 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   <div class="rules">
     <div><h3>篩選方式</h3>設定好條件後按「開始篩選」。每個條件都是「而且」：要同時符合所有有設定的條件才會列出。留空或選「不限」就是不篩這一項。條件會自動記住。點表頭可以排序。</div>
     <div><h3>月線</h3>月線＝近 20 日收盤平均。今日突破：<code>昨收 ≤ 昨日月線</code> 且 <code>今收 &gt; 今日月線</code>；跌破相反。量比＝今日量 ÷ 前 5 日均量。</div>
-    <div><h3>三大法人</h3>表格的法人佔量＝三大法人買賣超張數 ÷ 當日成交量。K 線側板可看近 5 日外資、投信、自營商明細。</div>
-    <div><h3>排除條件</h3>權值股依市值排名（收盤價 × 已發行股數）。資料：臺灣證券交易所、證券櫃檯買賣中心每日收盤行情（上市＋上櫃，股票名稱旁標「櫃」的是上櫃）。族群依自建的族群對照表，一檔可屬多個族群；點表格或 K 線側板裡的族群標籤，會列出同族群的所有股票。僅供參考，非投資建議。</div>
+    <div><h3>三大法人</h3>只有上櫃股票有資料（證交所 OpenAPI 沒有上市個股法人資料，上市股票顯示「—」）。法人佔量＝三大法人買賣超張數 ÷ 當日成交量。</div>
+    <div><h3>排除條件</h3>權值股依市值排名（收盤價 × 已發行股數）。資料：上市取自臺灣證券交易所每日收盤行情，每天約 18:00 更新；上櫃與發行股數取自證交所、櫃買中心官方 OpenAPI，每天約 18:00～21:00 更新（股票名稱旁標「櫃」的是上櫃，標「前日」表示櫃買中心還沒更新當天資料）。族群依自建的族群對照表，一檔可屬多個族群；點表格或 K 線側板裡的族群標籤，會列出同族群的所有股票。僅供參考，非投資建議。</div>
   </div>
   </div>
 
@@ -255,7 +255,7 @@ function calc(raw) {
   const m60 = ok60 ? avg(c61.slice(1)) : null, m60p = ok60 ? avg(c61.slice(0, 60)) : null;
   return {c: raw.c, n: raw.n, k: K, p, pv, m60, m60p, ch: r2((p / pv - 1) * 100), v: v6[5], r: a5 ? r2(v6[5] / a5) : 0,
     m5: r2(m5), m5p: r2(m5p), m20: r2(m20), m20p: r2(m20p), d: r2((p / m20 - 1) * 100),
-    gap: r2((m5 / m20 - 1) * 100), mc: raw.sh ? Math.round(p * raw.sh / 1e8) : null, etf: !/^[1-9]\d{3}$/.test(raw.c), otc: raw.m === "o", g: (window.TWS_GROUPS || {})[raw.c] || [],
+    gap: r2((m5 / m20 - 1) * 100), mc: raw.sh ? Math.round(p * raw.sh / 1e8) : null, etf: !/^[1-9]\d{3}$/.test(raw.c), otc: raw.m === "o", lag: raw.e || 0, g: (window.TWS_GROUPS || {})[raw.c] || [],
     ...inst(raw, v6[5])};
 }
 function inst(raw, vol) {
@@ -329,7 +329,7 @@ function render() {
   $("more").hidden = rows.length <= limit;
   $("tb").innerHTML = rows.slice(0, limit).map((x, i) => `<tr>
 <td class="l">${i + 1}</td>
-<td class="l sym"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c} ↗</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}</td>
+<td class="l sym"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c} ↗</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}${x.lag ? '<span class="otc" title="櫃買中心尚未更新最新一天，顯示的是前一個交易日">前日</span>' : ""}</td>
 <td class="grp">${x.g.length ? chips(x.g) : "—"}</td>
 <td class="${sg(x.ch)}">${f2(x.p)}</td><td class="${sg(x.ch)}">${pct(x.ch)}</td>
 <td>${x.v.toLocaleString()}</td><td>${f2(x.r)}</td>
@@ -354,9 +354,9 @@ function showK(code) {
   const card = (t, c, m5, m20, cls) => `<div><h4>${t}</h4><p><span>收盤價</span><span>${f2(c)}</span></p><p><span>MA5 / MA20</span><span class="${cls}">${f2(m5)} / ${f2(m20)}</span></p></div>`;
   $("cmp").innerHTML = card("前一根 K 棒（昨日）", x.pv, x.m5p, x.m20p, "") + card("最新收盤 K 棒（今日）", x.p, x.m5, x.m20, x.m5 > x.m20 ? "dn" : "up");
   $("shade").hidden = false; $("drawer").classList.add("open"); $("drawer").setAttribute("aria-hidden", "false");
-  const fd = D.fdates || [], sgn = n => n == null ? "—" : `<span class="${sg(n)}">${n > 0 ? "+" : ""}${n.toLocaleString()}</span>`;
+  const dl = (D.dates || []).slice(0, (D.dates || []).length - x.lag), fd = dl.slice(-x.f.length), sgn = n => n == null ? "—" : `<span class="${sg(n)}">${n > 0 ? "+" : ""}${n.toLocaleString()}</span>`;
   const sum = j => { const a = x.f.filter(Boolean); return a.length ? a.reduce((s, d) => s + d[j], 0) : null; };
-  $("instT").innerHTML = `<tr><th class="l">日期</th><th>外資</th><th>投信</th><th>自營商</th><th>合計</th></tr>` +
+  $("instT").innerHTML = !x.otc ? `<tr><td class="l">上市股票沒有三大法人資料（證交所 OpenAPI 未提供個股法人買賣超）</td></tr>` : `<tr><th class="l">日期</th><th>外資</th><th>投信</th><th>自營商</th><th>合計</th></tr>` +
     x.f.map((d, i) => `<tr><td class="l">${fd[i] || ""}</td>${d ? d.map(sgn).map(v => `<td>${v}</td>`).join("") : `<td colspan="4">尚無資料</td>`}</tr>`).join("") +
     `<tr><td class="l">${x.f.length} 日合計</td>${[0, 1, 2, 3].map(j => `<td>${sgn(sum(j))}</td>`).join("")}</tr>`;
   setDaily(); renderWatchBtn(); $("dClose").focus();
@@ -371,7 +371,7 @@ function setLegend(items) {
 function lastMa(K, n) { const c = K.map(b => b ? b[3] : null); return ma(c, n, c.length - 1); }
 function setDaily() {
   const x = open; if (!x) return;
-  chart = {K: x.k, labels: D.dates || [], mas: [[60, "#c77dff"], [20, "#3fa7ff"], [5, "#f5b83d"]], N: 60};
+  chart = {K: x.k, labels: (D.dates || []).slice(0, (D.dates || []).length - x.lag), mas: [[60, "#c77dff"], [20, "#3fa7ff"], [5, "#f5b83d"]], N: 60};
   const m60 = lastMa(x.k, 60);
   setLegend([`MA5 週線 ${f2(x.m5)}`, `MA20 月線 ${f2(x.m20)}`, `MA60 季線 ${m60 == null ? "資料不足" : f2(m60)}`]);
   draw();
@@ -451,7 +451,7 @@ $("hd").addEventListener("keydown", e => { if (e.key === "Enter") e.target.click
 $("shade").addEventListener("click", closeK); $("dClose").addEventListener("click", closeK);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeK(); });
 
-$("sub").innerHTML = D ? `已載入 <b>${all.length.toLocaleString()}</b> 檔上市櫃股票 ・ 資料日期 ${D.date} ・ 產生於 ${D.built} ・ 資料來源：證交所、櫃買中心` : "尚無資料：請先點兩下「執行選股.bat」抓取資料";
+$("sub").innerHTML = D ? `已載入 <b>${all.length.toLocaleString()}</b> 檔上市櫃股票 ・ 上市資料 ${D.date}（每天約 18:00 更新）・ 上櫃資料 ${D.odate || D.date}（每天約 18:00～21:00 更新）・ 產生於 ${D.built}` : "尚無資料：請先點兩下「執行選股.bat」抓取資料";
 /* ---- 盤中訊息與推播（資料來自 tw-stock-alert Worker） ---- */
 const WORKER = "https://tw-stock-alert.tw-stock-alert-worker.workers.dev";
 let code = load("tws-code", "");
