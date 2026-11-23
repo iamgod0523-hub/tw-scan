@@ -7,23 +7,23 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<meta name="theme-color" content="#0b0f17">
+<meta name="theme-color" content="#f4f1ea">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="選股雷達">
 <style>
 /* VOICE: 量化掃描終端機，深色、數字清楚
    IDEA: 盤後掃描器：策略按鈕 → 結果表 → K 線側板
    PICTURE: 結果表與 K 線圖本身
-   COLOUR/TYPE: 深藍黑底，翠綠為操作色；台股慣例紅漲綠跌；系統中文字型＋等寬數字
+   COLOUR/TYPE: 米色淺灰底、白色卡片，墨綠為操作色；台股慣例紅漲綠跌；系統中文字型＋等寬數字
    LAYOUT: 頂列導覽、大標題、策略按鈕列、表格、右側抽屜 */
-:root{color-scheme:dark;--bg:#0b0f17;--panel:#111725;--panel2:#161d2d;--line:#222b3d;--ink:#e8ecf3;--mut:#8a94a8;--acc:#19c48a;--accbg:#0f3d2e;--up:#ff4d5e;--dn:#19c48a;--ma5:#f5b83d;--ma20:#3fa7ff;--ma60:#c77dff;--mono:ui-monospace,"Cascadia Mono",Consolas,monospace}
+:root{color-scheme:light;--bg:#f4f1ea;--panel:#ffffff;--panel2:#f2eee6;--line:#e1dbcf;--ink:#22262c;--mut:#6c7079;--acc:#0e8a5f;--accbg:#e2f3eb;--up:#d22f45;--dn:#0e8a5f;--ma5:#d08a00;--ma20:#1f6fd1;--ma60:#8b46c9;--soft:#3e444e;--mono:ui-monospace,"Cascadia Mono",Consolas,monospace}
 *{box-sizing:border-box;min-width:0}[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif}
 button{font:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:18px;padding:10px max(3vw,14px);background:rgba(11,15,23,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:18px;padding:10px max(3vw,14px);background:rgba(244,241,234,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .brand{font-weight:800;font-size:17px;white-space:nowrap}
 .nav{display:flex;gap:18px;overflow-x:auto;flex:1;scrollbar-width:none}
 .nav button{flex:none;background:none;border:0;border-bottom:2px solid transparent;padding:8px 0;color:var(--mut);white-space:nowrap;font-size:14px}
@@ -60,14 +60,14 @@ th{font-size:12px;color:var(--mut);font-weight:600;background:var(--panel2);curs
 th[data-dir]::after{content:" ▾"}th[data-dir=asc]::after{content:" ▴"}
 th.l,td.l{text-align:left}
 td{font-family:var(--mono);font-size:14px}
-tbody tr:hover{background:#151c2b}
+tbody tr:hover{background:#faf8f3}
 .sym{font-family:"Microsoft JhengHei",system-ui,sans-serif;font-weight:700}
 .sym a{color:var(--ink);text-decoration:none}.sym a:hover{color:var(--acc)}
 .sym small{color:var(--mut);font-weight:400;margin-left:6px;font-size:13px}
 .otc{display:inline-block;margin-left:6px;padding:0 5px;border:1px solid var(--line);border-radius:4px;font-size:11px;color:var(--mut);font-weight:400;vertical-align:1px}
 td.grp{white-space:normal;min-width:120px;max-width:240px;text-align:left}
-.gchip{display:inline-block;margin:2px 4px 2px 0;padding:3px 8px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;color:#c8cfdc;font-family:"Microsoft JhengHei",system-ui,sans-serif;font-size:12px;line-height:1.4;cursor:pointer}
-.gchip:hover,.gchip:focus-visible{border-color:var(--acc);color:#7ff0c4}
+.gchip{display:inline-block;margin:2px 4px 2px 0;padding:3px 8px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;color:var(--soft);font-family:"Microsoft JhengHei",system-ui,sans-serif;font-size:12px;line-height:1.4;cursor:pointer}
+.gchip:hover,.gchip:focus-visible{border-color:var(--acc);color:var(--acc);background:var(--accbg)}
 .gback{margin-left:8px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:4px 10px;font-size:13px;color:var(--ink)}
 h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .up{color:var(--up)}.dn{color:var(--dn)}.c5{color:var(--ma5)}.c20{color:var(--ma20)}.c60{color:var(--ma60)}
@@ -76,9 +76,9 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .empty{padding:60px 20px;text-align:center;color:var(--mut)}.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:6px}
 .more{display:block;margin:16px auto;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 22px}
 .rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px;padding:34px 0 50px;font-size:13px;color:var(--mut)}
-.rules h3{color:var(--ink);font-size:15px;margin:0 0 6px}.rules code{font-family:var(--mono);color:#cfd6e4}
+.rules h3{color:var(--ink);font-size:15px;margin:0 0 6px}.rules code{font-family:var(--mono);color:var(--soft);background:var(--panel2);padding:0 4px;border-radius:4px}
 /* 參數設定 */
-.dlg{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px}
+.dlg{position:fixed;inset:0;z-index:20;background:rgba(30,26,20,.35);display:grid;place-items:center;padding:16px}
 .dlg .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(520px,100%);padding:22px;max-height:90vh;overflow:auto}
 .dlg h2{margin:0 0 14px;font-size:18px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -89,9 +89,9 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .big{display:flex;align-items:center;gap:8px;grid-column:1/-1;font-size:14px}.big input[type=number]{width:80px}
 .acts{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
 .acts button{border-radius:8px;padding:10px 18px;border:1px solid var(--line);background:var(--panel2)}
-.acts .ok{background:var(--acc);border-color:var(--acc);color:#04130d;font-weight:700}
+.acts .ok{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
 /* K 線側板 */
-.shade{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10}
+.shade{position:fixed;inset:0;background:rgba(30,26,20,.35);z-index:10}
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);z-index:11;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease}
 .drawer.open{transform:none}
 @media(prefers-reduced-motion:reduce){.drawer{transition:none}}
@@ -114,7 +114,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .mini th,.mini td{padding:8px 10px;font-size:13px;cursor:default}.mini th{background:var(--bg)}
 .mini tr:last-child td{border-bottom:0;font-weight:700}
 .df{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--mut)}
-.go{background:var(--acc);color:#04130d;font-weight:700;text-decoration:none;border-radius:8px;padding:11px 16px;white-space:nowrap}
+.go{background:var(--acc);color:#fff;font-weight:700;text-decoration:none;border-radius:8px;padding:11px 16px;white-space:nowrap}
 .tools{display:flex;gap:10px;margin-left:auto}
 .cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .cats button{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:14px;color:var(--mut);min-height:40px}
@@ -130,20 +130,20 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .arow{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center}
 .arow input{background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink);font:inherit;font-size:16px;padding:10px 12px;min-height:44px;width:min(260px,100%)}
 .abtn{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:10px 16px;min-height:44px;font-size:14px}
-.abtn.pri{background:var(--acc);border-color:var(--acc);color:#04130d;font-weight:700}
+.abtn.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
 .amsg{font-size:13px;color:var(--mut)}.amsg.err{color:var(--up)}.amsg.ok{color:var(--acc)}
-.hint{border-left:3px solid var(--ma5);padding:8px 12px;background:#1a1710;border-radius:6px;margin-top:10px;font-size:14px;color:#e9d7a8}
+.hint{border-left:3px solid var(--ma5);padding:8px 12px;background:#fbf3de;border-radius:6px;margin-top:10px;font-size:14px;color:#6b4c10}
 .alist{display:flex;flex-direction:column;gap:10px;margin-bottom:40px}
 .aitem{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:56px 1fr;gap:4px 12px}
 .aitem time{font-family:var(--mono);color:var(--mut);font-size:14px;padding-top:2px}
-.aitem h4{margin:0;font-size:16px}.aitem .ab{grid-column:2;font-size:14px;color:#c8cfdc;white-space:pre-line}
+.aitem h4{margin:0;font-size:16px}.aitem .ab{grid-column:2;font-size:14px;color:var(--soft);white-space:pre-line}
 .chips{grid-column:2;display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;min-height:36px}
 .chip:hover{border-color:var(--acc)}
 .wlist{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .wchip{display:inline-flex;align-items:center;gap:4px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 4px 4px 12px;font-size:14px;min-height:36px}
 .wchip.other{padding-right:12px;color:var(--mut)}
-.wchip button{background:none;border:0;color:var(--mut);width:32px;height:32px;border-radius:50%;font-size:14px}.wchip button:hover{background:#2a3246;color:var(--up)}
+.wchip button{background:none;border:0;color:var(--mut);width:32px;height:32px;border-radius:50%;font-size:14px}.wchip button:hover{background:#f6e1e4;color:var(--up)}
 .wchip b{font-weight:600;cursor:pointer}
 .linkbtn{background:none;border:0;color:var(--acc);text-decoration:underline;padding:0 4px;font-size:13px}
 .aempty{padding:40px 20px;text-align:center;color:var(--mut);background:var(--panel);border:1px dashed var(--line);border-radius:12px}
@@ -383,7 +383,7 @@ function setLegend(items) {
 function lastMa(K, n) { const c = K.map(b => b ? b[3] : null); return ma(c, n, c.length - 1); }
 function setDaily() {
   const x = open; if (!x) return;
-  chart = {K: x.k, labels: (D.dates || []).slice(0, (D.dates || []).length - x.lag), mas: [[60, "#c77dff"], [20, "#3fa7ff"], [5, "#f5b83d"]], N: 60};
+  chart = {K: x.k, labels: (D.dates || []).slice(0, (D.dates || []).length - x.lag), mas: [[60, "#8b46c9"], [20, "#1f6fd1"], [5, "#d08a00"]], N: 60};
   const m60 = lastMa(x.k, 60);
   setLegend([`MA5 週線 ${f2(x.m5)}`, `MA20 月線 ${f2(x.m20)}`, `MA60 季線 ${m60 == null ? "資料不足" : f2(m60)}`]);
   draw();
@@ -404,13 +404,13 @@ function draw(hover) {
   }
   const padL = 8, padR = 56, top = 26, ph = (H - top - 10) * 0.74, vh = (H - top - 10) * 0.2, vy = H - 8;
   const cw = (W - padL - padR) / N, y = v => top + (hi - v) / (hi - lo || 1) * ph, xc = i => padL + (i - s0 + 0.5) * cw;
-  g.font = "11px ui-monospace,Consolas,monospace"; g.fillStyle = "#8a94a8"; g.strokeStyle = "#1c2435"; g.lineWidth = 1;
+  g.font = "11px ui-monospace,Consolas,monospace"; g.fillStyle = "#6c7079"; g.strokeStyle = "#ebe6dc"; g.lineWidth = 1;
   for (let t = 0; t <= 4; t++) {
     const v = lo + (hi - lo) * t / 4, yy = Math.round(y(v)) + .5;
     g.setLineDash([3, 4]); g.beginPath(); g.moveTo(padL, yy); g.lineTo(W - padR, yy); g.stroke(); g.setLineDash([]);
     g.fillText(f2(v), W - padR + 6, yy + 4);
   }
-  const up = "#ff4d5e", dn = "#19c48a";
+  const up = "#d22f45", dn = "#0e8a5f";
   for (let i = s0; i < K.length; i++) {
     const b = K[i]; if (!b) continue;
     const col = b[3] >= b[0] ? up : dn, cx = xc(i), bw = Math.max(1, cw * 0.62);
@@ -427,7 +427,7 @@ function draw(hover) {
   geo = {s0, cw, padL, N};
   const tip = $("tip"), dates = chart.labels;
   const i = hover ?? K.length - 1, b = K[i];
-  if (hover != null) { g.strokeStyle = "#4a5670"; g.lineWidth = 1; g.beginPath(); g.moveTo(Math.round(xc(i)) + .5, top); g.lineTo(Math.round(xc(i)) + .5, H - 4); g.stroke(); }
+  if (hover != null) { g.strokeStyle = "#a9a39a"; g.lineWidth = 1; g.beginPath(); g.moveTo(Math.round(xc(i)) + .5, top); g.lineTo(Math.round(xc(i)) + .5, H - 4); g.stroke(); }
   tip.innerHTML = b ? `${dates[i] || ""} 開 ${f2(b[0])} 高 ${f2(b[1])} 低 ${f2(b[2])} 收 <span class="${b[3] >= b[0] ? "up" : "dn"}">${f2(b[3])}</span> 量 ${b[4].toLocaleString()}` : `${dates[i] || ""} 無交易`;
 }
 $("cv").addEventListener("mousemove", e => {
