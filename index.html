@@ -135,6 +135,10 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .amsg{font-size:13px;color:var(--mut)}.amsg.err{color:var(--up)}.amsg.ok{color:var(--acc)}
 .hint{border-left:3px solid var(--ma5);padding:8px 12px;background:#fbf3de;border-radius:6px;margin-top:10px;font-size:14px;color:#6b4c10}
 .alist{display:flex;flex-direction:column;gap:10px;margin-bottom:40px}
+.aitem.new{background:#fdf6e3;border-color:#f0d9a8;box-shadow:inset 4px 0 0 var(--up)}
+.nbadge{display:inline-block;margin-left:8px;padding:0 7px;border-radius:9px;background:var(--up);color:#fff;font-size:12px;line-height:18px;vertical-align:2px;font-weight:600}
+.adiv{display:flex;align-items:center;gap:10px;color:var(--up);font-size:13px;font-weight:600;margin:2px 0}.adiv::before,.adiv::after{content:"";flex:1;height:1px;background:var(--up);opacity:.45}
+#aCats .cnew{display:inline-block;margin-left:4px;padding:0 6px;border-radius:9px;background:var(--up);color:#fff;font-size:11px;line-height:17px;font-weight:600}
 .aitem{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:56px 1fr;gap:4px 12px}
 .aitem time{font-family:var(--mono);color:var(--mut);font-size:14px;padding-top:2px}
 .aitem h4{margin:0;font-size:16px}.aitem .ab{grid-column:2;font-size:14px;color:var(--soft);margin-top:4px}.aln{padding:2px 0;line-height:1.5}.aln b{color:var(--ink);font-weight:600}.aln.sub{padding-left:1.2em;color:var(--mut);font-size:13px}
@@ -497,7 +501,7 @@ $("sub").innerHTML = D ? `已載入 <b>${all.length.toLocaleString()}</b> 檔上
 /* ---- 盤中訊息與推播（資料來自 tw-stock-alert Worker） ---- */
 const WORKER = "https://tw-stock-alert.tw-stock-alert-worker.workers.dev";
 let code = load("tws-code", "");
-let reg = null, feed = [], feedDate = "", pollTimer = null, aMsg = "", aMsgCls = "";
+let fresh = new Set(), reg = null, feed = [], feedDate = "", pollTimer = null, aMsg = "", aMsgCls = "";
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const pushOK = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
@@ -618,23 +622,40 @@ const ATYPES = [
   {k: "vol", name: "60分K爆量", re: /爆量/}, {k: "black", name: "黑飛型態", re: /黑飛/}];
 const aType = title => { const t = String(title).replace(/\s+/g, ""); return (ATYPES.find(x => x.re.test(t)) || {k: "other"}).k; };
 let aCat = load("tws-acat", "all");
+/* 主畫面 App 圖示上的紅色數字（iPhone 需 iOS 16.4 以上、從主畫面開啟的 App）；也同步給背景程式累加用 */
+async function setBadge(n) {
+  try { const c = await caches.open("tws-badge"); await c.put("n", new Response(String(n))); } catch (err) {}
+  try { if (n && navigator.setAppBadge) await navigator.setAppBadge(n); else if (navigator.clearAppBadge) await navigator.clearAppBadge(); } catch (err) {}
+}
 function renderFeed() {
   const today = feed.length;
   $("aStatus").textContent = code ? `${feedDate || "今天"}・共 ${today} 則・每分鐘自動更新` : "";
-  const seen = load("tws-seen", {});
-  const unseen = feedDate && seen.d === feedDate ? Math.max(0, today - (seen.n || 0)) : today;
-  $("aDot").hidden = !unseen || !$("alertView").hidden; $("aDot").textContent = unseen;
-  if (!$("alertView").hidden && feedDate) save("tws-seen", {d: feedDate, n: today});
+  /* 未讀：記住看過的通知編號（每天重算）。在盤中訊息頁時，進來前沒看過的會保留「新」標示，離開這頁才清掉 */
+  let rd = load("tws-read", null);
+  if (!rd || rd.d !== feedDate) {
+    const old = load("tws-seen", {}), keep = rd ? 0 : (old.d === feedDate ? old.n || 0 : 0);
+    rd = {d: feedDate, ids: feed.slice().sort((a, b) => a.t - b.t).slice(0, keep).map(i => i.id)};
+  }
+  const readSet = new Set(rd.ids), viewing = !$("alertView").hidden;
+  const unread = feed.filter(i => !readSet.has(i.id));
+  if (viewing) { unread.forEach(i => fresh.add(i.id)); if (feedDate) save("tws-read", {d: feedDate, ids: feed.map(i => i.id)}); }
+  else save("tws-read", rd);
+  const nUnread = viewing ? 0 : unread.length;
+  $("aDot").hidden = !nUnread; $("aDot").textContent = nUnread;
+  setBadge(code ? nUnread : 0);
+  const isNew = i => viewing ? fresh.has(i.id) : !readSet.has(i.id);
   $("aCats").hidden = !code; $("aNeed").hidden = !!code;
   if (!code) { $("aList").innerHTML = ""; return; }
   const n = k => k === "all" ? feed.length : feed.filter(i => aType(i.title) === k).length;
+  const nn = k => feed.filter(i => isNew(i) && (k === "all" || aType(i.title) === k)).length;
   const keys = ["all", ...ATYPES.map(t => t.k), ...(n("other") ? ["other"] : [])];
   if (!keys.includes(aCat)) aCat = "all";
-  $("aCats").innerHTML = keys.map(k => `<button type="button" data-a="${k}" aria-pressed="${k === aCat}">${k === "all" ? "全部" : k === "other" ? "其他" : ATYPES.find(t => t.k === k).name} ${n(k)}</button>`).join("");
+  $("aCats").innerHTML = keys.map(k => `<button type="button" data-a="${k}" aria-pressed="${k === aCat}">${k === "all" ? "全部" : k === "other" ? "其他" : ATYPES.find(t => t.k === k).name} ${n(k)}${nn(k) ? `<span class="cnew">${nn(k)} 新</span>` : ""}</button>`).join("");
   const list = aCat === "all" ? feed : feed.filter(i => aType(i.title) === aCat);
   const name = aCat === "all" ? "" : aCat === "other" ? "其他" : ATYPES.find(t => t.k === aCat).name;
-  $("aList").innerHTML = list.length ? list.map(i => `<article class="aitem"><time>${hm(i.t)}</time><h4>${esc(i.title)}</h4>
-<div class="ab">${feedBody(i.body)}</div></article>`).join("")
+  const lastNew = list.reduce((p, i, x) => isNew(i) ? x : p, -1);
+  $("aList").innerHTML = list.length ? list.map((i, x) => `<article class="aitem${isNew(i) ? " new" : ""}"><time>${hm(i.t)}</time><h4>${esc(i.title)}${isNew(i) ? `<span class="nbadge">新</span>` : ""}</h4>
+<div class="ab">${feedBody(i.body)}</div></article>${x === lastNew && x < list.length - 1 ? `<div class="adiv">以上為新訊息</div>` : ""}`).join("")
     : name ? `<div class="aempty">今天還沒有「${esc(name)}」通知。</div>`
     : `<div class="aempty">今天還沒有盤中訊息。<br>盤中（09:00–13:30）有訊號時會出現在這裡。</div>`;
 }
@@ -646,6 +667,7 @@ async function loadFeed() {
 let lastView = "scan";
 function showView(v) {
   if (v !== "settings") lastView = v;
+  if (v !== "alerts") fresh.clear();
   $("alertView").hidden = v !== "alerts"; $("watchView").hidden = v !== "watch"; $("scanView").hidden = v !== "scan"; $("setView").hidden = v !== "settings";
   $("vScan").setAttribute("aria-pressed", v === "scan"); $("vAlert").setAttribute("aria-pressed", v === "alerts"); $("vWatch").setAttribute("aria-pressed", v === "watch"); $("vSet").setAttribute("aria-pressed", v === "settings");
   if (v === "settings") renderSetup();
