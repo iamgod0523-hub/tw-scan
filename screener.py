@@ -164,6 +164,63 @@ def get_shares():
     return old
 
 
+# 產業別（上市＋上櫃公司基本資料），代碼對照證交所產業分類
+TPEX_PROFILE_URL = "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
+INDUSTRY_FILE = os.path.join(CACHE, "industry.json")
+IND_NAMES = {
+    "01": "水泥", "02": "食品", "03": "塑膠", "04": "紡織纖維", "05": "電機機械", "06": "電器電纜",
+    "07": "化學生技醫療", "08": "玻璃陶瓷", "09": "造紙", "10": "鋼鐵", "11": "橡膠", "12": "汽車",
+    "13": "電子", "14": "建材營造", "15": "航運", "16": "觀光餐旅", "17": "金融保險", "18": "貿易百貨",
+    "19": "綜合", "20": "其他", "21": "化學", "22": "生技醫療", "23": "油電燃氣", "24": "半導體",
+    "25": "電腦及週邊設備", "26": "光電", "27": "通信網路", "28": "電子零組件", "29": "電子通路",
+    "30": "資訊服務", "31": "其他電子", "32": "文化創意", "33": "農業科技", "34": "電子商務",
+    "35": "綠能環保", "36": "數位雲端", "37": "運動休閒", "38": "居家生活", "80": "管理股票",
+}
+
+
+def ind_name(v):
+    v = str(v or "").strip()
+    if not v:
+        return None
+    if v.isdigit():
+        return IND_NAMES.get(v.zfill(2))
+    for suf in ("工業", "業"):
+        if v.endswith(suf) and len(v) > len(suf) + 1:
+            return v[:-len(suf)]
+    return v
+
+
+def get_industry():
+    """{代號: 產業別}，一週更新一次；抓不到就用舊的"""
+    old = {}
+    if os.path.exists(INDUSTRY_FILE):
+        with open(INDUSTRY_FILE, encoding="utf-8") as f:
+            old = json.load(f)
+        if time.time() - old.pop("_at", 0) < 7 * 86400 and old:
+            return old
+    out = {}
+    for url in (SHARES_URL, TPEX_PROFILE_URL):
+        try:
+            print(f"  更新產業別：{url.rsplit('/', 1)[-1]}…", flush=True)
+            for r in http_json(url):
+                ck = next((k for k in r if k in ("公司代號", "SecuritiesCompanyCode")), None)
+                ik = next((k for k in r if "產業" in k or "Industry" in k), None)
+                code = stock_code(r.get(ck)) if ck else None
+                name = ind_name(r.get(ik)) if ik else None
+                if code and name:
+                    out[code] = name
+            time.sleep(1)
+        except Exception as e:
+            print(f"  產業別抓取失敗（{e}）", flush=True)
+    if out:
+        merged = {**old, **out}
+        with open(INDUSTRY_FILE, "w", encoding="utf-8") as f:
+            json.dump({**merged, "_at": time.time()}, f, ensure_ascii=False)
+        print(f"  產業別：{len(out)} 檔", flush=True)
+        return merged
+    return old
+
+
 def roc_date(v):
     """民國日期 1151123 → date(2026, 11, 23)"""
     v = str(v).strip()
@@ -244,7 +301,7 @@ def add_tpex(days):
     return otc, last
 
 
-def compute(days, shares, inst_by_day, otc=frozenset()):
+def compute(days, shares, inst_by_day, otc=frozenset(), ind=None):
     """只整理原始資料；均線、量比、策略都在網頁裡算，改畫面或條件不必重跑。
     上櫃若還沒更新到最新一天，就用它自己最新的那天（row["e"] = 落後幾天）"""
     last_date = days[-1][0]
@@ -266,6 +323,8 @@ def compute(days, shares, inst_by_day, otc=frozenset()):
         end = len(days) - lag
         f = [inst_by_day.get(d.strftime("%Y%m%d"), {}).get(code) for d, _ in days[max(0, end - INST_DAYS):end]]
         row = {"c": code, "n": name, "sh": shares.get(code), "k": k, "f": f}  # 近 5 日法人 [外資, 投信, 自營, 合計]
+        if ind and ind.get(code):
+            row["i"] = ind[code]  # 產業別
         if code in otc:
             row["m"] = "o"  # 上櫃
         if lag:
@@ -362,7 +421,7 @@ def main():
     if os.path.exists(otc_sh):
         with open(otc_sh, encoding="utf-8") as f:
             shares = {**json.load(f), **shares}
-    last_date, rows = compute(days, shares, inst_by_day, otc)
+    last_date, rows = compute(days, shares, inst_by_day, otc, get_industry())
     write_data(last_date, rows, [d.strftime("%m/%d") for d, _ in days],
                [d.strftime("%m/%d") for d in recent], otc_date)
     if otc_date and otc_date < last_date:
