@@ -271,7 +271,8 @@ const CATS = {
     desc: "<b>熱門股</b>：今天成交量（張數）最大的前 50 檔。"}};
 let ran = false, grp = "", cat = load("tws-cat", "filter"); if (!CATS[cat]) cat = "filter";
 let sortK = load("tws-sort", "r"); if (!COLS.some(c => c.k === sortK && !c.ns)) sortK = "r";
-let sortDir = load("tws-dir", "desc"), limit = 200, rows = [];
+const PG = 20;
+let sortDir = load("tws-dir", "desc"), limit = PG, rows = [];
 /* 由原始日 K 計算指標（改條件只要更新這個網頁，不必重跑 bat） */
 const avg = a => a.reduce((s, v) => s + v, 0) / a.length;
 const r2 = n => Math.round(n * 100) / 100;
@@ -355,14 +356,14 @@ function run() {
 const chips = g => g.map(n => `<button class="gchip" type="button" data-g="${esc(n)}" title="看「${esc(n)}」族群">${esc(n)}</button>`).join("");
 const tags = x => (x.ind ? `<button class="gchip ind" type="button" data-g="${esc(x.ind)}" title="看「${esc(x.ind)}」所有股票">${esc(x.ind)}</button>` : "") + chips(x.g);
 function showGroup(name) {
-  grp = name; limit = 200; $("q").value = ""; closeK(); run();
+  grp = name; limit = PG; $("q").value = ""; closeK(); run();
   $("mode").scrollIntoView({behavior: "smooth", block: "start"});
 }
 
 function render() {
   $("idle").hidden = ran || !!grp || !!CATS[cat] || !!$("q").value.trim();
   $("empty").hidden = rows.length > 0 || !$("idle").hidden;
-  $("more").hidden = rows.length <= limit;
+  $("more").hidden = rows.length <= limit; $("more").textContent = `顯示更多（還有 ${rows.length - limit} 檔）`;
   $("tb").innerHTML = rows.slice(0, limit).map((x, i) => `<tr>
 <td class="l">${i + 1}</td>
 <td class="grp">${tags(x) || "—"}</td>
@@ -469,13 +470,13 @@ fill(F);
 $("fp").addEventListener("input", readF); $("fp").addEventListener("change", readF);
 $("fDef").addEventListener("click", () => { fill(DEF); readF(); });
 $("fClear").addEventListener("click", () => { fill(CLEAR); readF(); });
-$("fGo").addEventListener("click", () => { readF(); ran = true; grp = ""; limit = 200; run(); $("mode").scrollIntoView({behavior: "smooth", block: "start"}); });
+$("fGo").addEventListener("click", () => { readF(); ran = true; grp = ""; limit = PG; run(); $("mode").scrollIntoView({behavior: "smooth", block: "start"}); });
 if (matchMedia("(max-width:700px)").matches && load("tws-fp-closed", false)) $("fp").open = false;
 $("fp").addEventListener("toggle", () => save("tws-fp-closed", !$("fp").open));
 
 /* ---- 分類 ---- */
 function setCat(c) {
-  cat = c; save("tws-cat", c); grp = ""; limit = 200;
+  cat = c; save("tws-cat", c); grp = ""; limit = PG;
   for (const b of $("cats").children) b.setAttribute("aria-pressed", b.dataset.cat === c);
   $("fp").hidden = c !== "filter";
   const C = CATS[c]; $("cDesc").hidden = !C; if (C) $("cDesc").innerHTML = C.desc + "這個分類不含 ETF，也不套用自訂篩選的條件。";
@@ -487,8 +488,8 @@ $("cats").addEventListener("click", e => { const b = e.target.closest("button[da
 setCat(cat);
 
 /* ---- 事件 ---- */
-$("q").addEventListener("input", () => { limit = 200; grp = ""; run(); });
-$("more").addEventListener("click", () => { limit += 300; render(); });
+$("q").addEventListener("input", () => { limit = PG; grp = ""; run(); });
+$("more").addEventListener("click", () => { limit += PG; render(); });
 $("tb").addEventListener("click", e => { const g = e.target.closest(".gchip"); if (g) return showGroup(g.dataset.g); const b = e.target.closest(".kbtn"); if (b) showK(b.dataset.c); });
 $("dName").addEventListener("click", e => { const g = e.target.closest(".gchip"); if (g) showGroup(g.dataset.g); });
 $("hd").addEventListener("click", e => {
