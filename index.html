@@ -499,7 +499,7 @@ $("hd").addEventListener("keydown", e => { if (e.key === "Enter") e.target.click
 $("shade").addEventListener("click", closeK); $("dClose").addEventListener("click", closeK);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeK(); });
 
-$("sub").innerHTML = D ? `已載入 <b>${all.length.toLocaleString()}</b> 檔上市櫃股票 ・ 上市資料 ${D.date}（每天約 18:00 更新）・ 上櫃資料 ${D.odate || D.date}（每天約 18:00～21:00 更新）・ 產生於 ${D.built}` : "尚無資料：請先點兩下「執行選股.bat」抓取資料";
+$("sub").innerHTML = D ? `已載入 <b>${all.length.toLocaleString()}</b> 檔上市櫃股票<br>上市資料更新時間：${D.built}；上櫃資料更新時間：${!D.odate || D.odate === D.date ? D.built : D.odate}` : "尚無資料：請先點兩下「執行選股.bat」抓取資料";
 /* ---- 盤中訊息與推播（資料來自 tw-stock-alert Worker） ---- */
 const WORKER = "https://tw-stock-alert.tw-stock-alert-worker.workers.dev";
 let code = load("tws-code", "");
