@@ -167,6 +167,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .views{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px;width:max-content;max-width:100%;margin-bottom:16px}
 .views button{background:none;border:0;border-radius:8px;padding:10px 18px;font-size:15px;color:var(--mut);min-height:44px;position:relative}
 .views button[aria-pressed=true]{background:var(--panel2);color:var(--ink);font-weight:700}
+@media (max-width:480px){.views{width:100%;gap:2px}.views button{flex:1;padding:10px 4px;font-size:14px}}
 .dot{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:10px;background:var(--up);color:#fff;font-size:12px;line-height:20px;text-align:center}
 .acard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:16px}
 .acard h3{margin:0 0 6px;font-size:16px}.acard p{margin:4px 0;color:var(--mut);font-size:14px}
@@ -212,7 +213,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
     </div>
     <label class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="代號、名稱、產業或族群（例如 2330、半導體、散熱）"></label>
   </div>
-  <div class="views" role="tablist"><button type="button" id="vScan" aria-pressed="true">盤後選股</button><button type="button" id="vAlert" aria-pressed="false">盤中訊息<span class="dot" id="aDot" hidden></span></button><button type="button" id="vWatch" aria-pressed="false">監控清單</button></div>
+  <div class="views" role="tablist"><button type="button" id="vScan" aria-pressed="true">盤後選股</button><button type="button" id="vSec" aria-pressed="false">族群類別</button><button type="button" id="vAlert" aria-pressed="false">盤中訊息<span class="dot" id="aDot" hidden></span></button><button type="button" id="vWatch" aria-pressed="false">監控清單</button></div>
   <section id="alertView" hidden>
     <div class="acard" id="aNeed" hidden><h3>需要密碼</h3><p>請先到右上角「設定」輸入密碼，才能看盤中訊息。</p><div class="arow"><button class="abtn pri" type="button" data-go="settings">前往設定</button></div></div>
     <div class="status"><span id="aStatus"></span><button class="abtn" id="aRefresh" type="button">重新整理</button></div>
@@ -226,7 +227,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   <section id="helpView" hidden>
     <div class="status"><span>說明</span><button class="abtn" id="helpBack" type="button">← 返回</button></div>
   <div class="rules">
-    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。<b>當日漲幅榜／跌幅榜</b>：漲跌幅最大的前 50 檔。<b>熱門股</b>：成交量（張數）最大的前 50 檔。<b>強勢族群</b>：依題材族群或官方產業分組，比較平均漲幅、漲停家數、上漲比例、量比和近 5 日漲幅。三個排行榜不含標「前日」、還沒更新到當天的上櫃股票。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。價格加上紅底的是今天漲停、綠底的是跌停。<b>籌碼</b>：融資融券每天由證交所、櫃買中心公布（通常晚上才有，所以每天 22:30 會再更新一次）；「千張大戶」是集保戶股權分散表中持有 1,000 張以上股東的持股比例，每週更新一次，「週」是跟上週比的變化。<b>圖表</b>：股票名稱右邊的小 K 棒是今天的開、高、低、收（紅＝收盤高於開盤，虛線＝昨收）；下方是今天盤中的分時走勢（每 5 分鐘一點，紅＝高於昨收、綠＝低於昨收），虛線是昨天收盤價。分時資料由盤中通知的程式向富果查詢，需先在設定輸入通知密碼，看到哪些卡片才抓哪些。點卡片或股票代號看 K 線。可切換回列表。</div>
+    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。<b>當日漲幅榜／跌幅榜</b>：漲跌幅最大的前 50 檔。<b>熱門股</b>：成交量（張數）最大的前 50 檔。<b>族群類別</b>（上方第二個分頁）：依題材族群或官方產業分組，比較平均漲幅、漲停家數、上漲比例、量比和近 5 日漲幅。三個排行榜不含標「前日」、還沒更新到當天的上櫃股票。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。價格加上紅底的是今天漲停、綠底的是跌停。<b>籌碼</b>：融資融券每天由證交所、櫃買中心公布（通常晚上才有，所以每天 22:30 會再更新一次）；「千張大戶」是集保戶股權分散表中持有 1,000 張以上股東的持股比例，每週更新一次，「週」是跟上週比的變化。<b>圖表</b>：股票名稱右邊的小 K 棒是今天的開、高、低、收（紅＝收盤高於開盤，虛線＝昨收）；下方是今天盤中的分時走勢（每 5 分鐘一點，紅＝高於昨收、綠＝低於昨收），虛線是昨天收盤價。分時資料由盤中通知的程式向富果查詢，需先在設定輸入通知密碼，看到哪些卡片才抓哪些。點卡片或股票代號看 K 線。可切換回列表。</div>
     <div><h3>自訂篩選</h3>設定好條件後按「開始篩選」。每個條件都是「而且」：要同時符合所有有設定的條件才會列出。留空或選「不限」就是不篩這一項。條件會自動記住。點表頭可以排序。</div>
     <div><h3>月線</h3>月線＝近 20 日收盤平均。今日突破：<code>昨收 ≤ 昨日月線</code> 且 <code>今收 &gt; 今日月線</code>；跌破相反。量比＝今日量 ÷ 前 5 日均量。</div>
     <div><h3>三大法人</h3>只有上櫃股票有資料（證交所 OpenAPI 沒有上市個股法人資料，上市股票顯示「—」）。</div>
@@ -244,7 +245,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
     </div>
   </section>
   <div id="scanView">
-  <div class="cats" role="tablist" id="cats"><button type="button" data-cat="filter">自訂篩選</button><button type="button" data-cat="up">當日漲幅榜</button><button type="button" data-cat="dn">當日跌幅榜</button><button type="button" data-cat="hot">熱門股</button><button type="button" data-cat="boll">布林上軌突破</button><button type="button" data-cat="sec">強勢族群</button></div>
+  <div class="cats" role="tablist" id="cats"><button type="button" data-cat="filter">自訂篩選</button><button type="button" data-cat="up">當日漲幅榜</button><button type="button" data-cat="dn">當日跌幅榜</button><button type="button" data-cat="hot">熱門股</button><button type="button" data-cat="boll">布林上軌突破</button></div>
   <div class="cdesc" id="cDesc" hidden></div>
   <details class="fpanel" id="fp">
     <summary>篩選條件<small id="fsum"></small></summary>
@@ -321,8 +322,8 @@ const CATS = {
     desc: "<b>當日跌幅榜</b>：今天跌幅最大的前 50 檔。"},
   hot: {name: "熱門股", test: x => !x.etf && !x.lag, sort: ["v", "desc"], top: 50,
     desc: "<b>熱門股</b>：今天成交量（張數）最大的前 50 檔。"},
-  sec: {name: "強勢族群", sector: true, test: () => false,
-    desc: "<b>強勢族群</b>：把今天收盤的股票依題材族群或官方產業分組，比較每組的平均漲幅、漲停家數、上漲比例、平均量比和近 5 日漲幅；每組列出漲最多的 3 檔。題材族群至少 3 檔、官方產業至少 5 檔才列入。點族群名稱看組內所有股票。"}};
+  sec: {name: "族群類別", sector: true, test: () => false,
+    desc: "<b>族群類別</b>：把今天收盤的股票依題材族群或官方產業分組，比較每組的平均漲幅、漲停家數、上漲比例、平均量比和近 5 日漲幅；每組列出漲最多的 3 檔。題材族群至少 3 檔、官方產業至少 5 檔才列入。點族群名稱看組內所有股票。"}};
 let secSrc = load("tws-secsrc", "g"), secSort = load("tws-secsort", "avg");
 let ran = false, grp = "", cat = "filter";
 let sortK = load("tws-sort", "r"); if (!COLS.some(c => c.k === sortK && !c.ns)) sortK = "r";
@@ -439,7 +440,7 @@ function secRun(q) {
   for (const b of $("sSrc").children) b.setAttribute("aria-pressed", b.dataset.s === secSrc);
   $("sSort").value = secSort;
   $("secWrap").hidden = false; $("resCard").hidden = $("vBar").hidden = $("more").hidden = true;
-  $("mode").innerHTML = `強勢族群・${secSrc === "g" ? "題材族群" : "官方產業"}${q ? `・搜尋「${esc(q)}」` : ""} <b>${L.length}</b> 組`;
+  $("mode").innerHTML = `族群類別・${secSrc === "g" ? "題材族群" : "官方產業"}${q ? `・搜尋「${esc(q)}」` : ""} <b>${L.length}</b> 組`;
   $("excl").textContent = "";
   $("secEmpty").hidden = L.length > 0;
   const w = n => (n * 100).toFixed(1) + "%";
@@ -829,11 +830,13 @@ async function loadFeed() {
   try { const j = await api("/feed"); feed = j.items || []; feedDate = j.date; } catch (err) { $("aStatus").textContent = err.message; return; }
   renderFeed();
 }
-let lastView = "scan";
+let lastView = "scan", scanCat = "filter";
 function showView(v) {
   if (v !== "settings" && v !== "help") lastView = v;
   if (v !== "alerts") fresh.clear();
-  $("alertView").hidden = v !== "alerts"; $("watchView").hidden = v !== "watch"; $("scanView").hidden = v !== "scan"; $("setView").hidden = v !== "settings"; $("helpView").hidden = v !== "help"; $("vHelp").setAttribute("aria-pressed", v === "help");
+  $("alertView").hidden = v !== "alerts"; $("watchView").hidden = v !== "watch"; $("scanView").hidden = v !== "scan" && v !== "sector"; $("cats").hidden = v === "sector"; $("vSec").setAttribute("aria-pressed", v === "sector");
+  if (v === "sector" && cat !== "sec") { scanCat = cat; setCat("sec"); run(); }
+  if (v === "scan" && cat === "sec") { setCat(scanCat || "filter"); run(); } $("setView").hidden = v !== "settings"; $("helpView").hidden = v !== "help"; $("vHelp").setAttribute("aria-pressed", v === "help");
   $("vScan").setAttribute("aria-pressed", v === "scan"); $("vAlert").setAttribute("aria-pressed", v === "alerts"); $("vWatch").setAttribute("aria-pressed", v === "watch"); $("vSet").setAttribute("aria-pressed", v === "settings");
   if (v === "settings") renderSetup();
   if (v === "alerts") loadFeed();
@@ -842,6 +845,7 @@ function showView(v) {
   if (location.hash !== h) history.replaceState(null, "", location.pathname + h);
 }
 $("vScan").addEventListener("click", () => showView("scan"));
+$("vSec").addEventListener("click", () => showView("sector"));
 $("home").addEventListener("click", () => { closeK(); showView("scan"); setCat("filter"); run(); scrollTo({top: 0, behavior: "smooth"}); });
 $("vAlert").addEventListener("click", () => showView("alerts"));
 $("vWatch").addEventListener("click", () => showView("watch"));
@@ -858,7 +862,7 @@ if ("serviceWorker" in navigator) {
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) loadFeed(); });
 pollTimer = setInterval(() => { if (!document.hidden) loadFeed(); }, 60000);
-if (location.hash === "#help") showView("help"); else if (location.hash === "#alerts") showView("alerts"); else if (location.hash === "#watch") showView("watch"); else if (location.hash === "#settings") { showView("settings"); loadFeed(); loadWatch(); } else { loadFeed(); loadWatch(); }
+if (location.hash === "#sector") showView("sector"); else if (location.hash === "#help") showView("help"); else if (location.hash === "#alerts") showView("alerts"); else if (location.hash === "#watch") showView("watch"); else if (location.hash === "#settings") { showView("settings"); loadFeed(); loadWatch(); } else { loadFeed(); loadWatch(); }
 
 header(); run();
 }
