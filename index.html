@@ -72,7 +72,8 @@ td.grp{white-space:normal;min-width:120px;max-width:240px;text-align:left}
 .gback{margin-left:8px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:4px 10px;font-size:13px;color:var(--ink)}
 .gchip.ind{border-radius:5px;background:#eef1f6;border-color:#d3dae6;color:#3d4a63}
 h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
-.up{color:var(--up)}.dn{color:var(--dn)}.c5{color:var(--ma5)}.c20{color:var(--ma20)}.c60{color:var(--ma60)}
+.up{color:var(--up)}.dn{color:var(--dn)}
+.lu,.ld{color:#fff!important;border-radius:5px;padding:0 5px}.lu{background:var(--up)}.ld{background:var(--dn)}.c5{color:var(--ma5)}.c20{color:var(--ma20)}.c60{color:var(--ma60)}
 .kbtn{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:13px;font-family:"Microsoft JhengHei",sans-serif}
 .kbtn:hover{border-color:var(--acc)}
 .empty{padding:60px 20px;text-align:center;color:var(--mut)}.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:6px}
@@ -265,7 +266,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   </div>
   <button class="more" id="more" type="button" hidden>顯示更多</button>
   <div class="rules">
-    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。<b>當日漲幅榜／跌幅榜</b>：漲跌幅最大的前 50 檔。<b>熱門股</b>：成交量（張數）最大的前 50 檔。<b>強勢族群</b>：依題材族群或官方產業分組，比較平均漲幅、漲停家數、上漲比例、量比和近 5 日漲幅。三個排行榜不含標「前日」、還沒更新到當天的上櫃股票。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。<b>圖表</b>：股票名稱右邊的小 K 棒是今天的開、高、低、收（紅＝收盤高於開盤，虛線＝昨收）；下方是今天盤中的分時走勢（每 5 分鐘一點，紅＝高於昨收、綠＝低於昨收），虛線是昨天收盤價。分時資料由盤中通知的程式向富果查詢，需先在設定輸入通知密碼，看到哪些卡片才抓哪些。點卡片看 K 線，點代號開 Yahoo 股市。可切換回列表。</div>
+    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。<b>當日漲幅榜／跌幅榜</b>：漲跌幅最大的前 50 檔。<b>熱門股</b>：成交量（張數）最大的前 50 檔。<b>強勢族群</b>：依題材族群或官方產業分組，比較平均漲幅、漲停家數、上漲比例、量比和近 5 日漲幅。三個排行榜不含標「前日」、還沒更新到當天的上櫃股票。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。價格加上紅底的是今天漲停、綠底的是跌停。<b>圖表</b>：股票名稱右邊的小 K 棒是今天的開、高、低、收（紅＝收盤高於開盤，虛線＝昨收）；下方是今天盤中的分時走勢（每 5 分鐘一點，紅＝高於昨收、綠＝低於昨收），虛線是昨天收盤價。分時資料由盤中通知的程式向富果查詢，需先在設定輸入通知密碼，看到哪些卡片才抓哪些。點卡片看 K 線，點代號開 Yahoo 股市。可切換回列表。</div>
     <div><h3>自訂篩選</h3>設定好條件後按「開始篩選」。每個條件都是「而且」：要同時符合所有有設定的條件才會列出。留空或選「不限」就是不篩這一項。條件會自動記住。點表頭可以排序。</div>
     <div><h3>月線</h3>月線＝近 20 日收盤平均。今日突破：<code>昨收 ≤ 昨日月線</code> 且 <code>今收 &gt; 今日月線</code>；跌破相反。量比＝今日量 ÷ 前 5 日均量。</div>
     <div><h3>三大法人</h3>只有上櫃股票有資料（證交所 OpenAPI 沒有上市個股法人資料，上市股票顯示「—」）。</div>
@@ -324,6 +325,12 @@ let sortDir = load("tws-dir", "desc"), limit = PG, rows = [];
 /* 由原始日 K 計算指標（改條件只要更新這個網頁，不必重跑 bat） */
 const avg = a => a.reduce((s, v) => s + v, 0) / a.length;
 const r2 = n => Math.round(n * 100) / 100;
+const tick = (v, etf) => etf ? (v < 50 ? 0.01 : 0.05) : v < 10 ? 0.01 : v < 50 ? 0.05 : v < 100 ? 0.1 : v < 500 ? 0.5 : v < 1000 ? 1 : 5;
+function lims(p, pv, etf) {
+  const u = pv * 1.1, d = pv * 0.9, tu = tick(u, etf), td = tick(d, etf);
+  return {lim: p >= Math.floor(u / tu + 1e-6) * tu - 1e-6, ldn: p <= Math.ceil(d / td - 1e-6) * td + 1e-6};
+}
+const lc = x => x.lim ? "lu" : x.ldn ? "ld" : "";
 function calc(raw) {
   const K = raw.k, c = K.map(b => b ? b[3] : null), v = K.map(b => b ? b[4] : null);
   const c21 = c.slice(-21), v6 = v.slice(-6);
@@ -336,7 +343,7 @@ function calc(raw) {
   const up = m20 + 2 * sd(c21.slice(1)), upp = m20p + 2 * sd(c21.slice(0, 20));
   return {c: raw.c, n: raw.n, k: K, p, pv, up: r2(up), bu: pv <= upp && p > up, m60, m60p, ch: r2((p / pv - 1) * 100), v: v6[5], r: a5 ? r2(v6[5] / a5) : 0,
     m5: r2(m5), m5p: r2(m5p), m20: r2(m20), m20p: r2(m20p), amt: r2(p * v6[5] / 1e5), d: r2((p / m20 - 1) * 100),
-    gap: r2((m5 / m20 - 1) * 100), d5: r2((p / c21[15] - 1) * 100), lim: p / pv - 1 >= 0.094, mc: raw.sh ? Math.round(p * raw.sh / 1e8) : null, etf: !/^[1-9]\d{3}$/.test(raw.c), otc: raw.m === "o", lag: raw.e || 0, g: (window.TWS_GROUPS || {})[raw.c] || [], ind: raw.i || "",
+    gap: r2((m5 / m20 - 1) * 100), d5: r2((p / c21[15] - 1) * 100), ...lims(p, pv, !/^[1-9]\d{3}$/.test(raw.c)), mc: raw.sh ? Math.round(p * raw.sh / 1e8) : null, etf: !/^[1-9]\d{3}$/.test(raw.c), otc: raw.m === "o", lag: raw.e || 0, g: (window.TWS_GROUPS || {})[raw.c] || [], ind: raw.i || "",
     ...inst(raw, v6[5])};
 }
 function inst(raw, vol) {
@@ -448,7 +455,7 @@ function render() {
 <td class="l">${i + 1}</td>
 <td class="grp">${tags(x) || "—"}</td>
 <td class="l sym"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c} ↗</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}${x.lag ? '<span class="otc" title="櫃買中心尚未更新最新一天，顯示的是前一個交易日">前日</span>' : ""}</td>
-<td class="${sg(x.ch)}">${f2(x.p)}</td><td class="${sg(x.ch)}">${pct(x.ch)}</td>
+<td class="${sg(x.ch)}"><span class="${lc(x)}">${f2(x.p)}</span></td><td class="${sg(x.ch)}">${pct(x.ch)}</td>
 <td>${x.v.toLocaleString()}</td><td>${f2(x.r)}</td>
 <td class="${sg(x.fi)}">${x.fi == null ? "—" : (x.fi > 0 ? "+" : "") + x.fi.toLocaleString()}</td>
 <td><button class="kbtn" type="button" data-c="${x.c}">📈 K線指標</button></td></tr>`).join("");
@@ -505,7 +512,7 @@ function card(x, i) {
   return `<div class="sc" data-c="${x.c}" tabindex="0" role="button" aria-label="${x.c} ${esc(x.n)}，看 K 線">
 <span class="no">${i + 1}</span><div class="tg">${t.join("")}</div>
 <div class="nm"><span class="nmt"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c}</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}${x.lag ? '<span class="otc">前日</span>' : ""}</span>${kbar(x)}</div>
-<div class="px ${sg(x.ch)}"><b>${f2(x.p)}</b><span>${pct(x.ch)}</span></div>
+<div class="px ${sg(x.ch)}"><b class="${lc(x)}" ${lc(x) ? `title="${x.lim ? "漲停" : "跌停"}"` : ""}>${f2(x.p)}</b><span>${pct(x.ch)}</span></div>
 <div class="ch" data-c="${x.c}">${today(x)}</div>
 <div class="mt"><span>量 <i>${x.v.toLocaleString()}</i></span><span>量比 <i>${f2(x.r)}</i></span></div>${fi ? `<div class="mt">${fi}</div>` : ""}</div>`;
 }
@@ -521,7 +528,7 @@ function showK(code) {
   const x = all.find(r => r.c === code); if (!x) return;
   open = x;
   $("dName").innerHTML = `${x.c}<small>${esc(x.n)}${x.otc ? "（上櫃）" : ""}</small>${tags(x) ? " " + tags(x) : ""}`;
-  $("dQuote").innerHTML = `收盤：${f2(x.p)} ・ 漲跌：<span class="${sg(x.ch)}">${pct(x.ch)}</span> ・ 量比 ${f2(x.r)}`;
+  $("dQuote").innerHTML = `收盤：<span class="${lc(x)}">${f2(x.p)}</span>${x.lim ? "（漲停）" : x.ldn ? "（跌停）" : ""} ・ 漲跌：<span class="${sg(x.ch)}">${pct(x.ch)}</span> ・ 量比 ${f2(x.r)}`;
   $("dGo").href = `https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}/technical-analysis`;
   const card = (t, c, m5, m20, cls) => `<div><h4>${t}</h4><p><span>收盤價</span><span>${f2(c)}</span></p><p><span>MA5 / MA20</span><span class="${cls}">${f2(m5)} / ${f2(m20)}</span></p></div>`;
   $("cmp").innerHTML = card("前一根 K 棒（昨日）", x.pv, x.m5p, x.m20p, "") + card("最新收盤 K 棒（今日）", x.p, x.m5, x.m20, x.m5 > x.m20 ? "dn" : "up");
