@@ -306,8 +306,7 @@ const DEF = {vol:500, ratio:2, pmin:"", pmax:"", chmin:"", chmax:"", ma20:"above
 const CLEAR = {...Object.fromEntries(Object.keys(DEF).map(k => [k, ""])), noetf:true, nobig:true, bign:50};
 const COLS = [
   {k:"i", t:"次序", l:1, ns:1}, {k:"g", t:"產業／族群", l:1, ns:1}, {k:"c", t:"股票", l:1}, {k:"p", t:"收盤"}, {k:"ch", t:"漲跌%"},
-  {k:"v", t:"成交量(張)"}, {k:"r", t:"量比"}, {k:"fi", t:"法人買賣超(張)"}, {k:"md", t:"融資增減(張)"}, {k:"bh", t:"千張大戶%"},
-  {k:"x", t:"圖表診斷", ns:1}
+  {k:"v", t:"成交量(張)"}, {k:"r", t:"量比"}, {k:"fi", t:"法人買賣超(張)"}, {k:"md", t:"融資增減(張)"}, {k:"bh", t:"千張大戶%"}
 ];
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
@@ -476,8 +475,7 @@ function render() {
 <td>${x.v.toLocaleString()}</td><td>${f2(x.r)}</td>
 <td class="${sg(x.fi)}">${x.fi == null ? "—" : (x.fi > 0 ? "+" : "") + x.fi.toLocaleString()}</td>
 <td class="${sg(x.md)}" title="${x.mb == null ? "" : `融資餘額 ${x.mb.toLocaleString()} 張，近 5 日 ${sn(x.m5d)}`}">${sn(x.md)}</td>
-<td title="${x.bhd == null ? "" : `比上週 ${x.bhd > 0 ? "+" : ""}${f2(x.bhd)}`}">${x.bh == null ? "—" : f2(x.bh) + (x.bhd == null ? "" : `<small class="${sg(x.bhd)}"> ${x.bhd > 0 ? "▲" : x.bhd < 0 ? "▼" : ""}</small>`)}</td>
-<td><button class="kbtn" type="button" data-c="${x.c}">📈 K線指標</button></td></tr>`).join("");
+<td title="${x.bhd == null ? "" : `比上週 ${x.bhd > 0 ? "+" : ""}${f2(x.bhd)}`}">${x.bh == null ? "—" : f2(x.bh) + (x.bhd == null ? "" : `<small class="${sg(x.bhd)}"> ${x.bhd > 0 ? "▲" : x.bhd < 0 ? "▼" : ""}</small>`)}</td></tr>`).join("");
 }
 
 const SPK = {}, spkWait = new Set();
