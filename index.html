@@ -86,13 +86,14 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .sc:hover{border-color:var(--acc)}
 .sc .no{position:absolute;top:9px;right:10px;font:11px var(--mono);color:var(--mut)}
 .sc .tg{min-height:24px;padding-right:22px}.sc .tg .gchip{font-size:11px;padding:2px 6px;margin:0 3px 2px 0}
-.sc .nm{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc .nm{font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px}.sc .nmt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sc .kb{flex:none;margin-left:auto;width:11px;height:24px;overflow:visible}
 .sc .nm a{color:var(--ink);text-decoration:none;font-family:var(--mono)}.sc .nm small{font-weight:400;color:var(--soft);margin-left:5px;font-size:14px}
 .sc .nm .otc{margin-left:4px}
 .sc .px{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono)}
 .sc .px b{font-size:18px}.sc .px span{font-size:14px;font-weight:700}
 .sc .ch{position:relative;margin:2px 0}.sc svg{width:100%;height:48px;display:block}
-.sc .cht{position:absolute;left:18%;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:11px;color:var(--mut)}
+.sc .cht{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:11px;color:var(--mut)}
 .sc .mt{display:flex;justify-content:space-between;gap:6px;font:11px var(--mono);color:var(--mut);white-space:nowrap}
 .sc .mt i{font-style:normal;color:var(--soft)}.sc .mt i.up{color:var(--up)}.sc .mt i.dn{color:var(--dn)}
 .card.cv .scroll{display:none}
@@ -264,7 +265,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   </div>
   <button class="more" id="more" type="button" hidden>顯示更多</button>
   <div class="rules">
-    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。<b>當日漲幅榜／跌幅榜</b>：漲跌幅最大的前 50 檔。<b>熱門股</b>：成交量（張數）最大的前 50 檔。<b>強勢族群</b>：依題材族群或官方產業分組，比較平均漲幅、漲停家數、上漲比例、量比和近 5 日漲幅。三個排行榜不含標「前日」、還沒更新到當天的上櫃股票。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。<b>圖表</b>：每張卡片左邊是今天的 K 棒（開、高、低、收，紅＝收盤高於開盤），右邊是今天盤中的分時走勢（每 5 分鐘一點，紅＝高於昨收、綠＝低於昨收），虛線是昨天收盤價；K 棒和分時用同一個價格刻度。分時資料由盤中通知的程式向富果查詢，需先在設定輸入通知密碼，看到哪些卡片才抓哪些。點卡片看 K 線，點代號開 Yahoo 股市。可切換回列表。</div>
+    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。<b>當日漲幅榜／跌幅榜</b>：漲跌幅最大的前 50 檔。<b>熱門股</b>：成交量（張數）最大的前 50 檔。<b>強勢族群</b>：依題材族群或官方產業分組，比較平均漲幅、漲停家數、上漲比例、量比和近 5 日漲幅。三個排行榜不含標「前日」、還沒更新到當天的上櫃股票。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。<b>圖表</b>：股票名稱右邊的小 K 棒是今天的開、高、低、收（紅＝收盤高於開盤，虛線＝昨收）；下方是今天盤中的分時走勢（每 5 分鐘一點，紅＝高於昨收、綠＝低於昨收），虛線是昨天收盤價。分時資料由盤中通知的程式向富果查詢，需先在設定輸入通知密碼，看到哪些卡片才抓哪些。點卡片看 K 線，點代號開 Yahoo 股市。可切換回列表。</div>
     <div><h3>自訂篩選</h3>設定好條件後按「開始篩選」。每個條件都是「而且」：要同時符合所有有設定的條件才會列出。留空或選「不限」就是不篩這一項。條件會自動記住。點表頭可以排序。</div>
     <div><h3>月線</h3>月線＝近 20 日收盤平均。今日突破：<code>昨收 ≤ 昨日月線</code> 且 <code>今收 &gt; 今日月線</code>；跌破相反。量比＝今日量 ÷ 前 5 日均量。</div>
     <div><h3>三大法人</h3>只有上櫃股票有資料（證交所 OpenAPI 沒有上市個股法人資料，上市股票顯示「—」）。</div>
@@ -461,17 +462,21 @@ function today(x) {
   let lo = Math.min(b[2], pv), hi = Math.max(b[1], pv);
   if (pts) for (const q of pts) { lo = Math.min(lo, q[3]); hi = Math.max(hi, q[2]); }
   const rg = hi - lo || hi * 0.01 || 1, Y = v => (45 - (v - lo) / rg * 42).toFixed(1);
-  const kc = b[3] >= b[0] ? "var(--up)" : "var(--dn)", t1 = Math.min(+Y(b[0]), +Y(b[3])), t2 = Math.max(+Y(b[0]), +Y(b[3]));
-  let s = `<line x1="0" x2="100" y1="${Y(pv)}" y2="${Y(pv)}" stroke="var(--mut)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" opacity=".6"/>`
-    + `<line x1="6" x2="6" y1="${Y(b[1])}" y2="${Y(b[2])}" stroke="${kc}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`
-    + `<rect x="2.5" width="7" y="${t1}" height="${Math.max(t2 - t1, 0.8).toFixed(1)}" fill="${kc}"/>`;
+  let s = `<line x1="0" x2="100" y1="${Y(pv)}" y2="${Y(pv)}" stroke="var(--mut)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" opacity=".6"/>`;
   let lab = "";
   if (pts && pts.length) {
-    const X = t => { const m = ((t / 6e4 + 480) % 1440) - 540; return (16 + Math.max(0, Math.min(270, m)) / 270 * 84).toFixed(1); };
+    const X = t => { const m = ((t / 6e4 + 480) % 1440) - 540; return (Math.max(0, Math.min(270, m)) / 270 * 100).toFixed(1); };
     const line = pts.map(q => X(q[0]) + "," + Y(q[4])).join(" "), lc = pts[pts.length - 1][4] >= pv ? "var(--up)" : "var(--dn)";
     s += `<polyline points="${line}" fill="none" stroke="${lc}" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
   } else lab = typeof code === "undefined" || !code ? "分時需先輸入通知密碼" : d === null || (d && !pts) ? "沒有今日分時資料" : "分時載入中…";
   return `<svg viewBox="0 0 100 48" preserveAspectRatio="none" aria-label="今日 K 棒與分時走勢">${s}</svg>${lab ? `<span class="cht">${lab}</span>` : ""}`;
+}
+function kbar(x) {
+  const b = x.k[x.k.length - 1], pv = x.pv;
+  if (!b) return "";
+  const lo = Math.min(b[2], pv), hi = Math.max(b[1], pv), rg = hi - lo || hi * 0.01 || 1, Y = v => (23 - (v - lo) / rg * 22).toFixed(1);
+  const kc = b[3] >= b[0] ? "var(--up)" : "var(--dn)", t1 = Math.min(+Y(b[0]), +Y(b[3])), t2 = Math.max(+Y(b[0]), +Y(b[3]));
+  return `<svg class="kb" viewBox="0 0 11 24" aria-label="今日 K 棒：開 ${f2(b[0])} 高 ${f2(b[1])} 低 ${f2(b[2])} 收 ${f2(b[3])}"><title>今日 K 棒：開 ${f2(b[0])} 高 ${f2(b[1])} 低 ${f2(b[2])} 收 ${f2(b[3])}（虛線＝昨收 ${f2(pv)}）</title><line x1="0" x2="11" y1="${Y(pv)}" y2="${Y(pv)}" stroke="var(--mut)" stroke-width=".8" stroke-dasharray="1.5 1.5" opacity=".7"/><line x1="5.5" x2="5.5" y1="${Y(b[1])}" y2="${Y(b[2])}" stroke="${kc}" stroke-width="1.2"/><rect x="2.5" width="6" y="${t1}" height="${Math.max(t2 - t1, 1).toFixed(1)}" fill="${kc}"/></svg>`;
 }
 async function loadSpk(list) {
   if (typeof code === "undefined" || !code) return;
@@ -499,7 +504,7 @@ function card(x, i) {
   const fi = x.fi == null ? "" : `<i class="${sg(x.fi)}">法人 ${(x.fi > 0 ? "+" : "") + x.fi.toLocaleString()}</i>`;
   return `<div class="sc" data-c="${x.c}" tabindex="0" role="button" aria-label="${x.c} ${esc(x.n)}，看 K 線">
 <span class="no">${i + 1}</span><div class="tg">${t.join("")}</div>
-<div class="nm"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c}</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}${x.lag ? '<span class="otc">前日</span>' : ""}</div>
+<div class="nm"><span class="nmt"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c}</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}${x.lag ? '<span class="otc">前日</span>' : ""}</span>${kbar(x)}</div>
 <div class="px ${sg(x.ch)}"><b>${f2(x.p)}</b><span>${pct(x.ch)}</span></div>
 <div class="ch" data-c="${x.c}">${today(x)}</div>
 <div class="mt"><span>量 <i>${x.v.toLocaleString()}</i></span><span>量比 <i>${f2(x.r)}</i></span></div>${fi ? `<div class="mt">${fi}</div>` : ""}</div>`;
