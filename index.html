@@ -91,7 +91,8 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .sc .nm .otc{margin-left:4px}
 .sc .px{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono)}
 .sc .px b{font-size:18px}.sc .px span{font-size:14px;font-weight:700}
-.sc svg{width:100%;height:44px;display:block;margin:2px 0}
+.sc .ch{position:relative;margin:2px 0}.sc svg{width:100%;height:48px;display:block}
+.sc .cht{position:absolute;left:18%;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:11px;color:var(--mut)}
 .sc .mt{display:flex;justify-content:space-between;gap:6px;font:11px var(--mono);color:var(--mut);white-space:nowrap}
 .sc .mt i{font-style:normal;color:var(--soft)}.sc .mt i.up{color:var(--up)}.sc .mt i.dn{color:var(--dn)}
 .card.cv .scroll{display:none}
@@ -263,7 +264,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   </div>
   <button class="more" id="more" type="button" hidden>顯示更多</button>
   <div class="rules">
-    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。<b>當日漲幅榜／跌幅榜</b>：漲跌幅最大的前 50 檔。<b>熱門股</b>：成交量（張數）最大的前 50 檔。<b>強勢族群</b>：依題材族群或官方產業分組，比較平均漲幅、漲停家數、上漲比例、量比和近 5 日漲幅。三個排行榜不含標「前日」、還沒更新到當天的上櫃股票。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。<b>圖表</b>：每張卡片的走勢線是近 20 個交易日的收盤價，紅色＝這 20 日上漲、綠色＝下跌；點卡片看 K 線，點代號開 Yahoo 股市。可切換回列表。</div>
+    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。<b>當日漲幅榜／跌幅榜</b>：漲跌幅最大的前 50 檔。<b>熱門股</b>：成交量（張數）最大的前 50 檔。<b>強勢族群</b>：依題材族群或官方產業分組，比較平均漲幅、漲停家數、上漲比例、量比和近 5 日漲幅。三個排行榜不含標「前日」、還沒更新到當天的上櫃股票。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。<b>圖表</b>：每張卡片左邊是今天的 K 棒（開、高、低、收，紅＝收盤高於開盤），右邊是今天盤中的分時走勢（每 5 分鐘一點，紅＝高於昨收、綠＝低於昨收），虛線是昨天收盤價；K 棒和分時用同一個價格刻度。分時資料由盤中通知的程式向富果查詢，需先在設定輸入通知密碼，看到哪些卡片才抓哪些。點卡片看 K 線，點代號開 Yahoo 股市。可切換回列表。</div>
     <div><h3>自訂篩選</h3>設定好條件後按「開始篩選」。每個條件都是「而且」：要同時符合所有有設定的條件才會列出。留空或選「不限」就是不篩這一項。條件會自動記住。點表頭可以排序。</div>
     <div><h3>月線</h3>月線＝近 20 日收盤平均。今日突破：<code>昨收 ≤ 昨日月線</code> 且 <code>今收 &gt; 今日月線</code>；跌破相反。量比＝今日量 ÷ 前 5 日均量。</div>
     <div><h3>三大法人</h3>只有上櫃股票有資料（證交所 OpenAPI 沒有上市個股法人資料，上市股票顯示「—」）。</div>
@@ -440,7 +441,7 @@ function render() {
   $("resCard").classList.toggle("cv", cv); $("cards").hidden = !cv || !rows.length; $("cSort").hidden = !cv;
   $("vTog").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === view));
   $("cSort").value = sortK + ":" + sortDir;
-  if (cv) { $("cards").innerHTML = rows.slice(0, limit).map(card).join(""); $("tb").innerHTML = ""; return; }
+  if (cv) { const vis = rows.slice(0, limit); $("cards").innerHTML = vis.map(card).join(""); $("tb").innerHTML = ""; setTimeout(() => loadSpk(vis.map(x => x.c)), 0); return; }
   $("cards").innerHTML = "";
   $("tb").innerHTML = rows.slice(0, limit).map((x, i) => `<tr>
 <td class="l">${i + 1}</td>
@@ -452,6 +453,39 @@ function render() {
 <td><button class="kbtn" type="button" data-c="${x.c}">📈 K線指標</button></td></tr>`).join("");
 }
 
+const SPK = {}, spkWait = new Set();
+function today(x) {
+  const b = x.k[x.k.length - 1], pv = x.pv, d = SPK[x.c];
+  if (!b) return "";
+  const pts = d && D && d.d === D.date ? d.p : null;
+  let lo = Math.min(b[2], pv), hi = Math.max(b[1], pv);
+  if (pts) for (const q of pts) { lo = Math.min(lo, q[3]); hi = Math.max(hi, q[2]); }
+  const rg = hi - lo || hi * 0.01 || 1, Y = v => (45 - (v - lo) / rg * 42).toFixed(1);
+  const kc = b[3] >= b[0] ? "var(--up)" : "var(--dn)", t1 = Math.min(+Y(b[0]), +Y(b[3])), t2 = Math.max(+Y(b[0]), +Y(b[3]));
+  let s = `<line x1="0" x2="100" y1="${Y(pv)}" y2="${Y(pv)}" stroke="var(--mut)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" opacity=".6"/>`
+    + `<line x1="6" x2="6" y1="${Y(b[1])}" y2="${Y(b[2])}" stroke="${kc}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`
+    + `<rect x="2.5" width="7" y="${t1}" height="${Math.max(t2 - t1, 0.8).toFixed(1)}" fill="${kc}"/>`;
+  let lab = "";
+  if (pts && pts.length) {
+    const X = t => { const m = ((t / 6e4 + 480) % 1440) - 540; return (16 + Math.max(0, Math.min(270, m)) / 270 * 84).toFixed(1); };
+    const line = pts.map(q => X(q[0]) + "," + Y(q[4])).join(" "), lc = pts[pts.length - 1][4] >= pv ? "var(--up)" : "var(--dn)";
+    s += `<polyline points="${line}" fill="none" stroke="${lc}" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+  } else lab = typeof code === "undefined" || !code ? "分時需先輸入通知密碼" : d === null || (d && !pts) ? "沒有今日分時資料" : "分時載入中…";
+  return `<svg viewBox="0 0 100 48" preserveAspectRatio="none" aria-label="今日 K 棒與分時走勢">${s}</svg>${lab ? `<span class="cht">${lab}</span>` : ""}`;
+}
+async function loadSpk(list) {
+  if (typeof code === "undefined" || !code) return;
+  const need = list.filter(c => !(c in SPK) && !spkWait.has(c)).slice(0, 20);
+  if (!need.length) return;
+  need.forEach(c => spkWait.add(c));
+  let busy = false;
+  try { const j = await api("/spark?symbols=" + need.join(",")); busy = j.busy; for (const c of need) if (c in (j.items || {})) SPK[c] = j.items[c]; }
+  catch (err) { for (const c of need) SPK[c] = null; }
+  need.forEach(c => spkWait.delete(c));
+  for (const el of $("cards").querySelectorAll(".ch[data-c]")) { const x = rows.find(r => r.c === el.dataset.c); if (x && need.includes(x.c)) el.innerHTML = today(x); }
+  const left = [...$("cards").querySelectorAll(".ch[data-c]")].map(e => e.dataset.c).filter(c => !(c in SPK));
+  if (left.length) setTimeout(() => loadSpk(left), busy ? 20000 : 300);
+}
 function spark(x) {
   const c = x.k.slice(-20).map(b => b ? b[3] : null), v = c.filter(n => n != null);
   if (v.length < 2) return "";
@@ -467,7 +501,7 @@ function card(x, i) {
 <span class="no">${i + 1}</span><div class="tg">${t.join("")}</div>
 <div class="nm"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c}</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}${x.lag ? '<span class="otc">前日</span>' : ""}</div>
 <div class="px ${sg(x.ch)}"><b>${f2(x.p)}</b><span>${pct(x.ch)}</span></div>
-${spark(x)}
+<div class="ch" data-c="${x.c}">${today(x)}</div>
 <div class="mt"><span>量 <i>${x.v.toLocaleString()}</i></span><span>量比 <i>${f2(x.r)}</i></span></div>${fi ? `<div class="mt">${fi}</div>` : ""}</div>`;
 }
 function header() {
