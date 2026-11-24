@@ -159,8 +159,8 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .sx .bar i{display:block;height:100%}
 .sx .bar .b1{background:var(--up)}.sx .bar .b2{background:#eeaab3}.sx .bar .b3{background:#cfcabf}.sx .bar .b4{background:#7cc4a6}
 .sx .st{display:flex;flex-wrap:wrap;gap:4px 12px;font:12px var(--mono);color:var(--mut)}.sx .st b{color:var(--ink);font-weight:600}.sx .st b.up{color:var(--up)}.sx .st b.dn{color:var(--dn)}
-.sx .ld{font-size:13px;color:var(--soft);line-height:1.7}.sx .ld button{background:none;border:0;padding:0;margin-right:10px;font:inherit;color:var(--ink);white-space:nowrap}.sx .ld button:hover{color:var(--acc)}
-.sx .ld span{font-family:var(--mono);font-size:12px}
+.sx .lead{font-size:13px;color:var(--soft);line-height:1.7}.sx .lead button{background:none;border:0;padding:0;margin-right:10px;font:inherit;color:var(--ink);white-space:nowrap}.sx .lead button:hover{color:var(--acc)}
+.sx .lead span{font-family:var(--mono);font-size:12px}
 .leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--mut);margin:-4px 0 10px}.leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .views{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px;width:max-content;max-width:100%;margin-bottom:16px}
 .views button{background:none;border:0;border-radius:8px;padding:10px 18px;font-size:15px;color:var(--mut);min-height:44px;position:relative}
@@ -441,7 +441,7 @@ function secRun(q) {
 <div class="hd"><span class="rk">${i + 1}</span><button class="nm" type="button" data-g="${esc(g.k)}">${esc(g.k)}</button><span class="cnt">${g.n} 檔</span><span class="av ${sg(g.avg)}">${pct(g.avg)}</span></div>
 <div class="bar" aria-label="漲停 ${g.lim}、上漲 ${g.up - g.lim}、平盤 ${g.flat}、下跌 ${g.dn}"><i class="b1" style="width:${w(g.lim / g.n)}"></i><i class="b2" style="width:${w((g.up - g.lim) / g.n)}"></i><i class="b3" style="width:${w(g.flat / g.n)}"></i><i class="b4" style="width:${w(g.dn / g.n)}"></i></div>
 <div class="st"><span>漲停 <b>${g.lim}</b></span><span>上漲 <b>${Math.round(g.ur * 100)}%</b></span><span>量比 <b>${f2(g.r)}</b></span><span>5日 <b class="${sg(g.d5)}">${g.d5 == null ? "—" : pct(g.d5)}</b></span></div>
-<div class="ld">領漲：${g.top.map(x => `<button type="button" data-k="${x.c}">${esc(x.n)} <span class="${sg(x.ch)}">${pct(x.ch)}</span></button>`).join("")}</div></div>`).join("");
+<div class="lead">領漲：${g.top.map(x => `<button type="button" data-k="${x.c}">${esc(x.n)} <span class="${sg(x.ch)}">${pct(x.ch)}</span></button>`).join("")}</div></div>`).join("");
 }
 function showGroup(name) {
   grp = name; limit = PG; $("q").value = ""; closeK(); run();
