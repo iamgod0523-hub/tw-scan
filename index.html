@@ -246,7 +246,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   <div id="scanView">
   <div class="cats" role="tablist" id="cats"><button type="button" data-cat="filter">自訂篩選</button><button type="button" data-cat="up">當日漲幅榜</button><button type="button" data-cat="dn">當日跌幅榜</button><button type="button" data-cat="hot">熱門股</button><button type="button" data-cat="boll">布林上軌突破</button><button type="button" data-cat="sec">強勢族群</button></div>
   <div class="cdesc" id="cDesc" hidden></div>
-  <details class="fpanel" id="fp" open>
+  <details class="fpanel" id="fp">
     <summary>篩選條件<small id="fsum"></small></summary>
     <div class="fbody">
       <div class="fgrp"><h4>價量</h4>
@@ -628,8 +628,6 @@ $("fp").addEventListener("input", readF); $("fp").addEventListener("change", rea
 $("fDef").addEventListener("click", () => { fill(DEF); readF(); });
 $("fClear").addEventListener("click", () => { fill(CLEAR); readF(); });
 $("fGo").addEventListener("click", () => { readF(); ran = true; grp = ""; limit = PG; run(); $("mode").scrollIntoView({behavior: "smooth", block: "start"}); });
-if (matchMedia("(max-width:700px)").matches && load("tws-fp-closed", false)) $("fp").open = false;
-$("fp").addEventListener("toggle", () => save("tws-fp-closed", !$("fp").open));
 
 /* ---- 分類 ---- */
 function setCat(c) {
