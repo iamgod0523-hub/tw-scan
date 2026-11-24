@@ -245,11 +245,6 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
       <div class="fgrp"><h4>月線</h4>
         <label>月線（MA20）<select id="f_ma20"><option value="">不限</option><option value="above">站在月線之上</option><option value="below">在月線之下</option><option value="up">今日突破月線</option><option value="dn">今日跌破月線</option></select></label>
       </div>
-      <div class="fgrp"><h4>籌碼</h4>
-        <label>融資（近 5 日）<select id="f_mg"><option value="">不限</option><option value="dn">融資減少</option><option value="up">融資增加</option></select></label>
-        <label>法人（近 5 日，僅上櫃有資料）<select id="f_fi5"><option value="">不限</option><option value="buy">法人買超</option><option value="sell">法人賣超</option></select></label>
-        <label>千張大戶持股（比上週）<select id="f_bh"><option value="">不限</option><option value="up">大戶增加</option><option value="dn">大戶減少</option></select></label>
-      </div>
       <div class="fgrp"><h4>排除</h4>
         <label class="ck"><input id="f_noetf" type="checkbox"> 排除 ETF</label>
         <div class="ckn"><label class="ck"><input id="f_nobig" type="checkbox"> 排除權值股：市值前</label><input id="f_bign" type="number" min="1" step="10" aria-label="排除市值前幾大"> 大</div>
@@ -302,7 +297,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 {
 const D = window.TWS_DATA || null;
 const $ = id => document.getElementById(id);
-const DEF = {vol:500, ratio:2, pmin:"", pmax:"", chmin:"", chmax:"", ma20:"above", mg:"", fi5:"", bh:"", noetf:true, nobig:true, bign:50};
+const DEF = {vol:500, ratio:2, pmin:"", pmax:"", chmin:"", chmax:"", ma20:"above", noetf:true, nobig:true, bign:50};
 const CLEAR = {...Object.fromEntries(Object.keys(DEF).map(k => [k, ""])), noetf:true, nobig:true, bign:50};
 const COLS = [
   {k:"i", t:"次序", l:1, ns:1}, {k:"g", t:"產業／族群", l:1, ns:1}, {k:"c", t:"股票", l:1}, {k:"p", t:"收盤"}, {k:"ch", t:"漲跌%"},
@@ -387,9 +382,6 @@ function pass(x) {
   if (n(f.chmin) != null && x.ch < n(f.chmin)) return false;
   if (n(f.chmax) != null && x.ch > n(f.chmax)) return false;
   if (!maRel(f.ma20, x.p, x.pv, x.m20, x.m20p)) return false;
-  if (f.mg && (x.m5d == null ? x.md == null || (f.mg === "dn" ? x.md >= 0 : x.md <= 0) : f.mg === "dn" ? x.m5d >= 0 : x.m5d <= 0)) return false;
-  if (f.fi5 && (x.f5 == null || (f.fi5 === "buy" ? x.f5 <= 0 : x.f5 >= 0))) return false;
-  if (f.bh && (x.bhd == null || (f.bh === "up" ? x.bhd <= 0 : x.bhd >= 0))) return false;
   if (f.noetf && x.etf) return false;
   if (f.nobig && x.rk && x.rk <= (n(f.bign) || 50)) return false;
   return true;
@@ -402,7 +394,6 @@ function summary() {
   if (n(f.pmin) != null || n(f.pmax) != null) out.push(`股價 ${rng(f.pmin, f.pmax, "")}`);
   if (n(f.chmin) != null || n(f.chmax) != null) out.push(`漲跌 ${rng(f.chmin, f.chmax, "%")}`);
   if (f.ma20) out.push(OPT("ma20"));
-  for (const k of ["mg", "fi5", "bh"]) if (f[k]) out.push(OPT(k));
   const ex = [f.noetf && "ETF", f.nobig && `市值前 ${f.bign || 50} 大`].filter(Boolean);
   return {cond: out, ex};
 }
