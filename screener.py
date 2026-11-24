@@ -286,6 +286,160 @@ def load_cache(name):
     return None
 
 
+# 籌碼：融資融券（每天）、集保大戶持股（每週）
+MARGIN_URL = "https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date={d}&selectType=ALL&response=json"
+MARGIN_OPEN_URL = "https://openapi.twse.com.tw/v1/exchangeReport/MI_MARGN"
+TPEX_MARGIN_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_margin_balance"
+TDCC_URL = "https://opendata.tdcc.com.tw/getOD.ashx?id=1-5"
+MARGIN_DAYS = 5         # 融資「近 5 日增減」
+
+
+def get_margin(d, latest=False):
+    """上市融資融券（張）：{代號: [融資今日餘額, 融資前日餘額, 融券今日餘額, 融券前日餘額]}，依日期存檔"""
+    key = d.strftime("%Y%m%d")
+    path = os.path.join(CACHE, "margin_" + key + ".json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    out = {}
+    try:
+        j = http_json(MARGIN_URL.format(d=key))
+        if isinstance(j, dict) and j.get("stat") == "OK":
+            tables = list(j.get("tables") or [])
+            if j.get("creditFields"):
+                tables.append({"fields": j["creditFields"], "data": j.get("creditList", [])})
+            for t in tables:
+                f = t.get("fields") or []
+                if len(f) >= 13 and "代號" in str(f[0]):
+                    for row in t.get("data") or []:
+                        code = stock_code(row[0])
+                        if code:
+                            out[code] = [num(row[6]), num(row[5]), num(row[12]), num(row[11])]
+                    break
+    except Exception as e:
+        print(f"  上市融資融券（網站）抓取失敗：{e}", flush=True)
+    if not out and latest:  # 備援：OpenAPI 沒有日期，用「前日餘額＝上一個存檔的今日餘額」確認是這一天的資料
+        try:
+            prev = None
+            for name in sorted(os.listdir(CACHE), reverse=True):
+                if name.startswith("margin_") and name < "margin_" + key:
+                    prev = load_cache(name)
+                    break
+            tmp = {}
+            for r in http_json(MARGIN_OPEN_URL):
+                code = stock_code(r.get("股票代號"))
+                if code:
+                    tmp[code] = [num(r.get("融資今日餘額")), num(r.get("融資前日餘額")), num(r.get("融券今日餘額")), num(r.get("融券前日餘額"))]
+            same = [c for c in tmp if prev and c in prev and prev[c][0] == tmp[c][1]]
+            if prev and len(same) > 0.9 * len(tmp):
+                out = tmp
+            else:
+                print("  上市融資融券（OpenAPI）無法確認資料日期，略過", flush=True)
+        except Exception as e:
+            print(f"  上市融資融券（OpenAPI）抓取失敗：{e}", flush=True)
+    time.sleep(PAUSE)
+    if out:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(out, f)
+        print(f"  上市融資融券：{d:%Y-%m-%d}（{len(out)} 檔）", flush=True)
+    else:
+        print(f"  上市融資融券：{d:%Y-%m-%d} 尚未公布", flush=True)
+    return out or None
+
+
+def fetch_tpex_margin():
+    """上櫃融資融券（櫃買 OpenAPI，只有最新一天），依資料日期存檔"""
+    try:
+        rows = http_json(TPEX_MARGIN_URL)
+        if rows:
+            print(f"  上櫃融資融券欄位：{list(rows[0].keys())}", flush=True)
+        out, day = {}, None
+        for r in rows:
+            code = stock_code(r.get("SecuritiesCompanyCode") or r.get("代號"))
+            if not code:
+                continue
+            day = day or roc_date(r.get("Date") or r.get("資料日期"))
+            ks = {k.lower().replace("_", ""): k for k in r}
+            def pick(*must, no=()):
+                for lk, k in ks.items():
+                    if all(m in lk for m in must) and not any(n in lk for n in no):
+                        return num(r[k])
+                return None
+            mb = pick("margin", "balance", no=("previous", "prev", "yesterday", "limit", "quota", "rate"))
+            mp = pick("margin", "balance", "previous") or pick("margin", "balance", "prev")
+            sb = pick("short", "balance", no=("previous", "prev", "yesterday", "limit", "quota", "rate"))
+            sp = pick("short", "balance", "previous") or pick("short", "balance", "prev")
+            if mb is not None:
+                out[code] = [mb, mp, sb, sp]
+        if day and out:
+            with open(os.path.join(CACHE, "otc_margin_" + day.strftime("%Y%m%d") + ".json"), "w", encoding="utf-8") as f:
+                json.dump(out, f)
+            print(f"  上櫃融資融券：{day:%Y-%m-%d}（{len(out)} 檔）", flush=True)
+        else:
+            print("  上櫃融資融券：沒有可用的資料", flush=True)
+    except Exception as e:
+        print(f"  上櫃融資融券抓取失敗：{e}", flush=True)
+
+
+def get_tdcc():
+    """集保戶股權分散表（每週）：{代號: [千張以上持股比例%, 總股東人數]}，依資料日期存檔；回傳 (最新, 前一週, 最新日期)"""
+    try:
+        req = urllib.request.Request(TDCC_URL, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=60, context=CTX) as r:
+            text = r.read().decode("utf-8-sig", errors="replace")
+        out, day = {}, None
+        for line in text.splitlines()[1:]:
+            p = line.split(",")
+            if len(p) < 6:
+                continue
+            code = stock_code(p[1])
+            if not code:
+                continue
+            day = day or p[0].strip()
+            lv = p[2].strip()
+            if lv == "15":
+                out.setdefault(code, [None, None])[0] = num(p[5])
+            elif lv == "17":
+                out.setdefault(code, [None, None])[1] = num(p[3])
+        if day and out and day.isdigit():
+            path = os.path.join(CACHE, "tdcc_" + day + ".json")
+            if not os.path.exists(path):
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(out, f)
+            print(f"  集保股權分散：{day}（{len(out)} 檔）", flush=True)
+    except Exception as e:
+        print(f"  集保股權分散抓取失敗：{e}", flush=True)
+    files = sorted(n for n in os.listdir(CACHE) if n.startswith("tdcc_"))
+    cur = load_cache(files[-1]) if files else None
+    prev = load_cache(files[-2]) if len(files) > 1 else None
+    dt = files[-1][5:13] if files else None
+    return cur, prev, (f"{dt[:4]}-{dt[4:6]}-{dt[6:]}" if dt else None)
+
+
+def margin_rows(days, otc_date):
+    """每檔 [融資餘額, 融資今日增減, 融券餘額, 融券今日增減, 融資近 5 日增減]（張）"""
+    last = days[-1][0]
+    for d, _ in days[-(MARGIN_DAYS + 1):]:  # 第一次會補抓近 6 天，之後只抓新的一天
+        get_margin(d, d == last)
+    fetch_tpex_margin()
+    out = {}
+    for prefix, end in (("margin_", last), ("otc_margin_", otc_date)):
+        if not end:
+            continue
+        ds = [d for d, _ in days if d <= end]
+        cur = load_cache(prefix + end.strftime("%Y%m%d") + ".json")
+        if not cur:
+            continue
+        old = load_cache(prefix + ds[-1 - MARGIN_DAYS].strftime("%Y%m%d") + ".json") if len(ds) > MARGIN_DAYS else None
+        for code, (mb, mp, sb, sp) in cur.items():
+            if mb is None:
+                continue
+            m5 = mb - old[code][0] if old and code in old and old[code][0] is not None else None
+            out[code] = [mb, mb - mp if mp is not None else None, sb, sb - sp if sb is not None and sp is not None else None, m5]
+    return out
+
+
+
 def add_tpex(days):
     """把快取裡的上櫃資料併進每天的行情，上櫃股票標記 m=o；回傳 (上櫃代號, 上櫃最新資料日)"""
     fetch_tpex()
@@ -301,7 +455,7 @@ def add_tpex(days):
     return otc, last
 
 
-def compute(days, shares, inst_by_day, otc=frozenset(), ind=None):
+def compute(days, shares, inst_by_day, otc=frozenset(), ind=None, mg=None, bh=None):
     """只整理原始資料；均線、量比、策略都在網頁裡算，改畫面或條件不必重跑。
     上櫃若還沒更新到最新一天，就用它自己最新的那天（row["e"] = 落後幾天）"""
     last_date = days[-1][0]
@@ -325,6 +479,11 @@ def compute(days, shares, inst_by_day, otc=frozenset(), ind=None):
         row = {"c": code, "n": name, "sh": shares.get(code), "k": k, "f": f}  # 近 5 日法人 [外資, 投信, 自營, 合計]
         if ind and ind.get(code):
             row["i"] = ind[code]  # 產業別
+        if mg and code in mg:
+            row["mg"] = mg[code]  # [融資餘額, 今日增減, 融券餘額, 今日增減, 融資 5 日增減]（張）
+        if bh and bh[0] and code in bh[0]:
+            cur, prev = bh[0][code], (bh[1] or {}).get(code)
+            row["bh"] = [cur[0], prev[0] if prev else None, cur[1], prev[1] if prev else None]  # [千張大戶%, 上週%, 股東人數, 上週人數]
         if code in otc:
             row["m"] = "o"  # 上櫃
         if lag:
@@ -333,9 +492,9 @@ def compute(days, shares, inst_by_day, otc=frozenset(), ind=None):
     return last_date, rows
 
 
-def write_data(last_date, rows, dates, fdates, otc_date=None):
+def write_data(last_date, rows, dates, fdates, otc_date=None, bdate=None):
     payload = json.dumps({"date": last_date.strftime("%Y-%m-%d"), "dates": dates, "fdates": fdates,
-                          "odate": otc_date.strftime("%Y-%m-%d") if otc_date else None,
+                          "odate": otc_date.strftime("%Y-%m-%d") if otc_date else None, "bdate": bdate,
                           "built": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
                           "rows": rows}, ensure_ascii=False, separators=(",", ":"))
     with open(DATA_JS, "w", encoding="utf-8") as f:
@@ -421,9 +580,11 @@ def main():
     if os.path.exists(otc_sh):
         with open(otc_sh, encoding="utf-8") as f:
             shares = {**json.load(f), **shares}
-    last_date, rows = compute(days, shares, inst_by_day, otc, get_industry())
+    mg = margin_rows(days, otc_date)
+    tdcc = get_tdcc()
+    last_date, rows = compute(days, shares, inst_by_day, otc, get_industry(), mg, tdcc[:2])
     write_data(last_date, rows, [d.strftime("%m/%d") for d, _ in days],
-               [d.strftime("%m/%d") for d in recent], otc_date)
+               [d.strftime("%m/%d") for d in recent], otc_date, tdcc[2])
     if otc_date and otc_date < last_date:
         print(f"  上櫃資料還停在 {otc_date:%Y-%m-%d}（櫃買中心尚未更新），晚點再執行一次即可補上")
     print(f"\n完成：資料日期 {last_date:%Y-%m-%d}，共 {len(rows)} 檔（上櫃 {sum(1 for r in rows if r.get('m') == 'o')} 檔）。請打開：{PAGE}")
