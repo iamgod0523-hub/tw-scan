@@ -243,6 +243,11 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
       <div class="fgrp"><h4>月線</h4>
         <label>月線（MA20）<select id="f_ma20"><option value="">不限</option><option value="above">站在月線之上</option><option value="below">在月線之下</option><option value="up">今日突破月線</option><option value="dn">今日跌破月線</option></select></label>
       </div>
+      <div class="fgrp"><h4>籌碼</h4>
+        <label>融資（近 5 日）<select id="f_mg"><option value="">不限</option><option value="dn">融資減少</option><option value="up">融資增加</option></select></label>
+        <label>法人（近 5 日，僅上櫃有資料）<select id="f_fi5"><option value="">不限</option><option value="buy">法人買超</option><option value="sell">法人賣超</option></select></label>
+        <label>千張大戶持股（比上週）<select id="f_bh"><option value="">不限</option><option value="up">大戶增加</option><option value="dn">大戶減少</option></select></label>
+      </div>
       <div class="fgrp"><h4>排除</h4>
         <label class="ck"><input id="f_noetf" type="checkbox"> 排除 ETF</label>
         <div class="ckn"><label class="ck"><input id="f_nobig" type="checkbox"> 排除權值股：市值前</label><input id="f_bign" type="number" min="1" step="10" aria-label="排除市值前幾大"> 大</div>
@@ -266,7 +271,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
   </div>
   <button class="more" id="more" type="button" hidden>顯示更多</button>
   <div class="rules">
-    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。<b>當日漲幅榜／跌幅榜</b>：漲跌幅最大的前 50 檔。<b>熱門股</b>：成交量（張數）最大的前 50 檔。<b>強勢族群</b>：依題材族群或官方產業分組，比較平均漲幅、漲停家數、上漲比例、量比和近 5 日漲幅。三個排行榜不含標「前日」、還沒更新到當天的上櫃股票。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。價格加上紅底的是今天漲停、綠底的是跌停。<b>圖表</b>：股票名稱右邊的小 K 棒是今天的開、高、低、收（紅＝收盤高於開盤，虛線＝昨收）；下方是今天盤中的分時走勢（每 5 分鐘一點，紅＝高於昨收、綠＝低於昨收），虛線是昨天收盤價。分時資料由盤中通知的程式向富果查詢，需先在設定輸入通知密碼，看到哪些卡片才抓哪些。點卡片看 K 線，點代號開 Yahoo 股市。可切換回列表。</div>
+    <div><h3>分類</h3>盤後選股分成「自訂篩選」和固定條件的分類。<b>布林上軌突破</b>：布林上軌＝近 20 日收盤平均 + 2 倍標準差；<code>昨收 ≤ 昨日上軌</code> 且 <code>今收 &gt; 今日上軌</code>。<b>當日漲幅榜／跌幅榜</b>：漲跌幅最大的前 50 檔。<b>熱門股</b>：成交量（張數）最大的前 50 檔。<b>強勢族群</b>：依題材族群或官方產業分組，比較平均漲幅、漲停家數、上漲比例、量比和近 5 日漲幅。三個排行榜不含標「前日」、還沒更新到當天的上櫃股票。分類不含 ETF，也不套用自訂篩選的條件，選了會記住。價格加上紅底的是今天漲停、綠底的是跌停。<b>籌碼</b>：融資融券每天由證交所、櫃買中心公布（通常晚上才有，所以每天 22:30 會再更新一次）；「千張大戶」是集保戶股權分散表中持有 1,000 張以上股東的持股比例，每週更新一次，「週」是跟上週比的變化。<b>圖表</b>：股票名稱右邊的小 K 棒是今天的開、高、低、收（紅＝收盤高於開盤，虛線＝昨收）；下方是今天盤中的分時走勢（每 5 分鐘一點，紅＝高於昨收、綠＝低於昨收），虛線是昨天收盤價。分時資料由盤中通知的程式向富果查詢，需先在設定輸入通知密碼，看到哪些卡片才抓哪些。點卡片看 K 線，點代號開 Yahoo 股市。可切換回列表。</div>
     <div><h3>自訂篩選</h3>設定好條件後按「開始篩選」。每個條件都是「而且」：要同時符合所有有設定的條件才會列出。留空或選「不限」就是不篩這一項。條件會自動記住。點表頭可以排序。</div>
     <div><h3>月線</h3>月線＝近 20 日收盤平均。今日突破：<code>昨收 ≤ 昨日月線</code> 且 <code>今收 &gt; 今日月線</code>；跌破相反。量比＝今日量 ÷ 前 5 日均量。</div>
     <div><h3>三大法人</h3>只有上櫃股票有資料（證交所 OpenAPI 沒有上市個股法人資料，上市股票顯示「—」）。</div>
@@ -295,11 +300,11 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 {
 const D = window.TWS_DATA || null;
 const $ = id => document.getElementById(id);
-const DEF = {vol:500, ratio:2, pmin:"", pmax:"", chmin:"", chmax:"", ma20:"above", noetf:true, nobig:true, bign:50};
+const DEF = {vol:500, ratio:2, pmin:"", pmax:"", chmin:"", chmax:"", ma20:"above", mg:"", fi5:"", bh:"", noetf:true, nobig:true, bign:50};
 const CLEAR = {...Object.fromEntries(Object.keys(DEF).map(k => [k, ""])), noetf:true, nobig:true, bign:50};
 const COLS = [
   {k:"i", t:"次序", l:1, ns:1}, {k:"g", t:"產業／族群", l:1, ns:1}, {k:"c", t:"股票", l:1}, {k:"p", t:"收盤"}, {k:"ch", t:"漲跌%"},
-  {k:"v", t:"成交量(張)"}, {k:"r", t:"量比"}, {k:"fi", t:"法人買賣超(張)"},
+  {k:"v", t:"成交量(張)"}, {k:"r", t:"量比"}, {k:"fi", t:"法人買賣超(張)"}, {k:"md", t:"融資增減(張)"}, {k:"bh", t:"千張大戶%"},
   {k:"x", t:"圖表診斷", ns:1}
 ];
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
@@ -344,7 +349,12 @@ function calc(raw) {
   return {c: raw.c, n: raw.n, k: K, p, pv, up: r2(up), bu: pv <= upp && p > up, m60, m60p, ch: r2((p / pv - 1) * 100), v: v6[5], r: a5 ? r2(v6[5] / a5) : 0,
     m5: r2(m5), m5p: r2(m5p), m20: r2(m20), m20p: r2(m20p), amt: r2(p * v6[5] / 1e5), d: r2((p / m20 - 1) * 100),
     gap: r2((m5 / m20 - 1) * 100), d5: r2((p / c21[15] - 1) * 100), ...lims(p, pv, !/^[1-9]\d{3}$/.test(raw.c)), mc: raw.sh ? Math.round(p * raw.sh / 1e8) : null, etf: !/^[1-9]\d{3}$/.test(raw.c), otc: raw.m === "o", lag: raw.e || 0, g: (window.TWS_GROUPS || {})[raw.c] || [], ind: raw.i || "",
-    ...inst(raw, v6[5])};
+    ...inst(raw, v6[5]), ...chip(raw)};
+}
+function chip(raw) {
+  const m = raw.mg, b = raw.bh;
+  return {mb: m ? m[0] : null, md: m ? m[1] : null, sb: m ? m[2] : null, sd: m ? m[3] : null, m5d: m ? m[4] : null,
+    bh: b && b[0] != null ? b[0] : null, bhd: b && b[0] != null && b[1] != null ? r2(b[0] - b[1]) : null, hc: b ? b[2] : null, hcd: b && b[2] != null && b[3] != null ? b[2] - b[3] : null};
 }
 function inst(raw, vol) {
   const f = raw.f || [], t = f[f.length - 1];
@@ -357,6 +367,7 @@ all.filter(x => x.mc).sort((a, b) => b.mc - a.mc).forEach((x, i) => x.rk = i + 1
 
 const f2 = (n, d = 2) => n == null ? "—" : n.toLocaleString("zh-TW", {minimumFractionDigits:d, maximumFractionDigits:d});
 const sg = n => n > 0 ? "up" : n < 0 ? "dn" : "";
+const sn = n => n == null ? "—" : (n > 0 ? "+" : "") + Math.round(n).toLocaleString();
 const pct = n => (n > 0 ? "+" : "") + f2(n) + "%";
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -375,6 +386,9 @@ function pass(x) {
   if (n(f.chmin) != null && x.ch < n(f.chmin)) return false;
   if (n(f.chmax) != null && x.ch > n(f.chmax)) return false;
   if (!maRel(f.ma20, x.p, x.pv, x.m20, x.m20p)) return false;
+  if (f.mg && (x.m5d == null ? x.md == null || (f.mg === "dn" ? x.md >= 0 : x.md <= 0) : f.mg === "dn" ? x.m5d >= 0 : x.m5d <= 0)) return false;
+  if (f.fi5 && (x.f5 == null || (f.fi5 === "buy" ? x.f5 <= 0 : x.f5 >= 0))) return false;
+  if (f.bh && (x.bhd == null || (f.bh === "up" ? x.bhd <= 0 : x.bhd >= 0))) return false;
   if (f.noetf && x.etf) return false;
   if (f.nobig && x.rk && x.rk <= (n(f.bign) || 50)) return false;
   return true;
@@ -387,6 +401,7 @@ function summary() {
   if (n(f.pmin) != null || n(f.pmax) != null) out.push(`股價 ${rng(f.pmin, f.pmax, "")}`);
   if (n(f.chmin) != null || n(f.chmax) != null) out.push(`漲跌 ${rng(f.chmin, f.chmax, "%")}`);
   if (f.ma20) out.push(OPT("ma20"));
+  for (const k of ["mg", "fi5", "bh"]) if (f[k]) out.push(OPT(k));
   const ex = [f.noetf && "ETF", f.nobig && `市值前 ${f.bign || 50} 大`].filter(Boolean);
   return {cond: out, ex};
 }
@@ -458,6 +473,8 @@ function render() {
 <td class="${sg(x.ch)}"><span class="${lc(x)}">${f2(x.p)}</span></td><td class="${sg(x.ch)}">${pct(x.ch)}</td>
 <td>${x.v.toLocaleString()}</td><td>${f2(x.r)}</td>
 <td class="${sg(x.fi)}">${x.fi == null ? "—" : (x.fi > 0 ? "+" : "") + x.fi.toLocaleString()}</td>
+<td class="${sg(x.md)}" title="${x.mb == null ? "" : `融資餘額 ${x.mb.toLocaleString()} 張，近 5 日 ${sn(x.m5d)}`}">${sn(x.md)}</td>
+<td title="${x.bhd == null ? "" : `比上週 ${x.bhd > 0 ? "+" : ""}${f2(x.bhd)}`}">${x.bh == null ? "—" : f2(x.bh) + (x.bhd == null ? "" : `<small class="${sg(x.bhd)}"> ${x.bhd > 0 ? "▲" : x.bhd < 0 ? "▼" : ""}</small>`)}</td>
 <td><button class="kbtn" type="button" data-c="${x.c}">📈 K線指標</button></td></tr>`).join("");
 }
 
@@ -514,7 +531,7 @@ function card(x, i) {
 <div class="nm"><span class="nmt"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c}</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}${x.lag ? '<span class="otc">前日</span>' : ""}</span>${kbar(x)}</div>
 <div class="px ${sg(x.ch)}"><b class="${lc(x)}" ${lc(x) ? `title="${x.lim ? "漲停" : "跌停"}"` : ""}>${f2(x.p)}</b><span>${pct(x.ch)}</span></div>
 <div class="ch" data-c="${x.c}">${today(x)}</div>
-<div class="mt"><span>量 <i>${x.v.toLocaleString()}</i></span><span>量比 <i>${f2(x.r)}</i></span></div>${fi ? `<div class="mt">${fi}</div>` : ""}</div>`;
+<div class="mt"><span>量 <i>${x.v.toLocaleString()}</i></span><span>量比 <i>${f2(x.r)}</i></span></div>${fi || x.md != null ? `<div class="mt">${fi || "<span></span>"}${x.md != null ? `<span>資 <i class="${sg(x.md)}">${sn(x.md)}</i></span>` : ""}</div>` : ""}${x.bh != null ? `<div class="mt"><span>千張大戶 <i>${f2(x.bh, 1)}%</i></span>${x.bhd != null ? `<span>週 <i class="${sg(x.bhd)}">${x.bhd > 0 ? "+" : ""}${f2(x.bhd)}</i></span>` : ""}</div>` : ""}</div>`;
 }
 function header() {
   $("cSort").innerHTML = COLS.filter(c => !c.ns).map(c => { const nm = c.t.replace(/\(.*\)/, ""); return c.k === "c" ? `<option value="c:asc">代號 小→大</option><option value="c:desc">代號 大→小</option>` : `<option value="${c.k}:desc">${nm} 高→低</option><option value="${c.k}:asc">${nm} 低→高</option>`; }).join("");
@@ -528,7 +545,7 @@ function showK(code) {
   const x = all.find(r => r.c === code); if (!x) return;
   open = x;
   $("dName").innerHTML = `${x.c}<small>${esc(x.n)}${x.otc ? "（上櫃）" : ""}</small>${tags(x) ? " " + tags(x) : ""}`;
-  $("dQuote").innerHTML = `收盤：<span class="${lc(x)}">${f2(x.p)}</span>${x.lim ? "（漲停）" : x.ldn ? "（跌停）" : ""} ・ 漲跌：<span class="${sg(x.ch)}">${pct(x.ch)}</span> ・ 量比 ${f2(x.r)}`;
+  $("dQuote").innerHTML = `收盤：<span class="${lc(x)}">${f2(x.p)}</span>${x.lim ? "（漲停）" : x.ldn ? "（跌停）" : ""} ・ 漲跌：<span class="${sg(x.ch)}">${pct(x.ch)}</span> ・ 量比 ${f2(x.r)}${x.mb != null ? ` ・ 融資 ${x.mb.toLocaleString()} 張（今日 ${sn(x.md)}，5 日 ${sn(x.m5d)}）・ 融券 ${x.sb == null ? "—" : x.sb.toLocaleString()} 張（${sn(x.sd)}）` : ""}${x.bh != null ? ` ・ 千張大戶 ${f2(x.bh)}%${x.bhd != null ? `（比上週 ${x.bhd > 0 ? "+" : ""}${f2(x.bhd)}）` : ""}・ 股東 ${x.hc == null ? "—" : x.hc.toLocaleString()} 人${x.hcd != null ? `（${sn(x.hcd)}）` : ""}` : ""}`;
   $("dGo").href = `https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}/technical-analysis`;
   const card = (t, c, m5, m20, cls) => `<div><h4>${t}</h4><p><span>收盤價</span><span>${f2(c)}</span></p><p><span>MA5 / MA20</span><span class="${cls}">${f2(m5)} / ${f2(m20)}</span></p></div>`;
   $("cmp").innerHTML = card("前一根 K 棒（昨日）", x.pv, x.m5p, x.m20p, "") + card("最新收盤 K 棒（今日）", x.p, x.m5, x.m20, x.m5 > x.m20 ? "dn" : "up");
