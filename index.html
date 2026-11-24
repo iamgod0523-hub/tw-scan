@@ -24,7 +24,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Microsoft Jhe
 button{font:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:18px;padding:10px max(3vw,14px);background:rgba(244,241,234,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.brand{font-weight:800;font-size:17px;white-space:nowrap}
+.brand{font-weight:800;font-size:17px;white-space:nowrap;background:none;border:0;padding:4px 0;color:var(--ink);font-family:inherit;cursor:pointer}
 .nav{display:flex;gap:18px;overflow-x:auto;flex:1;scrollbar-width:none}
 .nav button{flex:none;background:none;border:0;border-bottom:2px solid transparent;padding:8px 0;color:var(--mut);white-space:nowrap;font-size:14px}
 .nav button[aria-pressed=true]{color:var(--acc);border-color:var(--acc)}
@@ -199,7 +199,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 </head>
 <body>
 <div class="top">
-  <div class="brand">選股雷達</div>
+  <button class="brand" id="home" type="button" title="回到自訂篩選">選股雷達</button>
   <button class="setbtn" id="vHelp" type="button" aria-pressed="false"><span aria-hidden="true">ⓘ</span>說明</button>
   <button class="setbtn" id="vSet" type="button" aria-pressed="false"><span aria-hidden="true">⚙</span>設定</button>
 </div>
@@ -244,7 +244,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
     </div>
   </section>
   <div id="scanView">
-  <div class="cats" role="tablist" id="cats"><button type="button" data-cat="filter">自訂篩選</button><button type="button" data-cat="boll">布林上軌突破</button><button type="button" data-cat="up">當日漲幅榜</button><button type="button" data-cat="dn">當日跌幅榜</button><button type="button" data-cat="hot">熱門股</button><button type="button" data-cat="sec">強勢族群</button></div>
+  <div class="cats" role="tablist" id="cats"><button type="button" data-cat="filter">自訂篩選</button><button type="button" data-cat="up">當日漲幅榜</button><button type="button" data-cat="dn">當日跌幅榜</button><button type="button" data-cat="hot">熱門股</button><button type="button" data-cat="boll">布林上軌突破</button><button type="button" data-cat="sec">強勢族群</button></div>
   <div class="cdesc" id="cDesc" hidden></div>
   <details class="fpanel" id="fp" open>
     <summary>篩選條件<small id="fsum"></small></summary>
@@ -324,7 +324,7 @@ const CATS = {
   sec: {name: "強勢族群", sector: true, test: () => false,
     desc: "<b>強勢族群</b>：把今天收盤的股票依題材族群或官方產業分組，比較每組的平均漲幅、漲停家數、上漲比例、平均量比和近 5 日漲幅；每組列出漲最多的 3 檔。題材族群至少 3 檔、官方產業至少 5 檔才列入。點族群名稱看組內所有股票。"}};
 let secSrc = load("tws-secsrc", "g"), secSort = load("tws-secsort", "avg");
-let ran = false, grp = "", cat = load("tws-cat", "filter"); if (!CATS[cat]) cat = "filter";
+let ran = false, grp = "", cat = "filter";
 let sortK = load("tws-sort", "r"); if (!COLS.some(c => c.k === sortK && !c.ns)) sortK = "r";
 const PG = 20;
 let view = load("tws-view", "card"); if (view !== "list") view = "card";
@@ -844,6 +844,7 @@ function showView(v) {
   if (location.hash !== h) history.replaceState(null, "", location.pathname + h);
 }
 $("vScan").addEventListener("click", () => showView("scan"));
+$("home").addEventListener("click", () => { closeK(); showView("scan"); setCat("filter"); run(); scrollTo({top: 0, behavior: "smooth"}); });
 $("vAlert").addEventListener("click", () => showView("alerts"));
 $("vWatch").addEventListener("click", () => showView("watch"));
 $("vSet").addEventListener("click", () => showView($("setView").hidden ? "settings" : lastView));
