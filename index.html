@@ -253,7 +253,7 @@ const $ = id => document.getElementById(id);
 const DEF = {vol:500, ratio:2, pmin:"", pmax:"", chmin:"", chmax:"", ma20:"above", noetf:true, nobig:true, bign:50};
 const CLEAR = {...Object.fromEntries(Object.keys(DEF).map(k => [k, ""])), noetf:true, nobig:true, bign:50};
 const COLS = [
-  {k:"i", t:"排名", l:1, ns:1}, {k:"c", t:"股票", l:1}, {k:"g", t:"產業／族群", l:1, ns:1}, {k:"p", t:"收盤"}, {k:"ch", t:"漲跌%"},
+  {k:"i", t:"次序", l:1, ns:1}, {k:"g", t:"產業／族群", l:1, ns:1}, {k:"c", t:"股票", l:1}, {k:"p", t:"收盤"}, {k:"ch", t:"漲跌%"},
   {k:"v", t:"成交量(張)"}, {k:"r", t:"量比"}, {k:"fi", t:"法人買賣超(張)"},
   {k:"x", t:"圖表診斷", ns:1}
 ];
@@ -365,8 +365,8 @@ function render() {
   $("more").hidden = rows.length <= limit;
   $("tb").innerHTML = rows.slice(0, limit).map((x, i) => `<tr>
 <td class="l">${i + 1}</td>
-<td class="l sym"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c} ↗</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}${x.lag ? '<span class="otc" title="櫃買中心尚未更新最新一天，顯示的是前一個交易日">前日</span>' : ""}</td>
 <td class="grp">${tags(x) || "—"}</td>
+<td class="l sym"><a href="https://tw.stock.yahoo.com/quote/${x.c}${x.otc ? ".TWO" : ".TW"}" target="_blank" rel="noopener">${x.c} ↗</a><small>${esc(x.n)}</small>${x.otc ? '<span class="otc">櫃</span>' : ""}${x.lag ? '<span class="otc" title="櫃買中心尚未更新最新一天，顯示的是前一個交易日">前日</span>' : ""}</td>
 <td class="${sg(x.ch)}">${f2(x.p)}</td><td class="${sg(x.ch)}">${pct(x.ch)}</td>
 <td>${x.v.toLocaleString()}</td><td>${f2(x.r)}</td>
 <td class="${sg(x.fi)}">${x.fi == null ? "—" : (x.fi > 0 ? "+" : "") + x.fi.toLocaleString()}</td>
