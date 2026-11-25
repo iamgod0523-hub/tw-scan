@@ -33,7 +33,9 @@ PAUSE = 3.5             # 每次連線間隔秒數（證交所有流量限制，
 SHARES_URL = "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"   # 上市公司基本資料（已發行股數）
 SHARES_FILE = os.path.join(CACHE, "shares.json")
 
-INST_DAYS = 5           # 近幾日三大法人（只有上櫃：證交所 OpenAPI 沒有上市個股法人資料）
+INST_DAYS = 5           # 近幾日三大法人明細
+STREAK_DAYS = 20        # 連買連賣最多往回看幾個交易日
+T86_URL = "https://www.twse.com.tw/rwd/zh/fund/T86?date={d}&selectType=ALLBUT0999&response=json"
 
 # 櫃買中心 OpenAPI（官方開放資料）：只提供最新一個交易日，抓到就依資料日期存起來
 TPEX_QUOTE_URL = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
@@ -440,6 +442,65 @@ def margin_rows(days, otc_date):
 
 
 
+def get_t86(d, latest):
+    """上市三大法人（證交所 T86）：{代號: [外資, 投信, 自營商, 合計]}（張），依日期存檔"""
+    key = d.strftime("%Y%m%d")
+    path = os.path.join(CACHE, "t86_" + key + ".json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    out, failed = {}, False
+    try:
+        j = http_json(T86_URL.format(d=key))
+        if isinstance(j, dict) and j.get("stat") == "OK":
+            f = j.get("fields") or []
+            rows = j.get("data") or []
+            if not f and j.get("tables"):
+                f = j["tables"][0].get("fields") or []
+                rows = j["tables"][0].get("data") or []
+            def idx(*names):
+                for n in names:
+                    for i, x in enumerate(f):
+                        if str(x).strip() == n:
+                            return i
+                return None
+            i_c = idx("證券代號")
+            i_f = idx("外陸資買賣超股數(不含外資自營商)", "外資買賣超股數")
+            i_t = idx("投信買賣超股數")
+            i_d = idx("自營商買賣超股數")
+            i_a = idx("三大法人買賣超股數")
+            if None not in (i_c, i_f, i_t, i_d, i_a):
+                for r in rows:
+                    code = stock_code(r[i_c])
+                    if code:
+                        out[code] = [round((num(r[i]) or 0) / 1000) for i in (i_f, i_t, i_d, i_a)]
+            else:
+                print(f"  上市三大法人欄位不符：{f}", flush=True)
+    except Exception as e:
+        print(f"  上市三大法人 {key} 抓取失敗：{e}", flush=True)
+        failed = True
+    time.sleep(PAUSE)
+    if out:
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(out, fh)
+        print(f"  上市三大法人：{d:%Y-%m-%d}（{len(out)} 檔）", flush=True)
+    elif d < latest and not failed:  # 過去的日子證交所沒有資料就記成空的，不再重抓
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump({}, fh)
+    return out or None
+
+
+def streak(hist, j):
+    """由最新一天往回數連續買超（正）或賣超（負）的天數；沒資料或 0 就停"""
+    n = 0
+    for v in reversed(hist):
+        x = v[j] if v else 0
+        if not x or (n and (x > 0) != (n > 0)):
+            break
+        n += 1 if x > 0 else -1
+    return n
+
+
 def add_tpex(days):
     """把快取裡的上櫃資料併進每天的行情，上櫃股票標記 m=o；回傳 (上櫃代號, 上櫃最新資料日)"""
     fetch_tpex()
@@ -477,6 +538,9 @@ def compute(days, shares, inst_by_day, otc=frozenset(), ind=None, mg=None, bh=No
         end = len(days) - lag
         f = [inst_by_day.get(d.strftime("%Y%m%d"), {}).get(code) for d, _ in days[max(0, end - INST_DAYS):end]]
         row = {"c": code, "n": name, "sh": shares.get(code), "k": k, "f": f}  # 近 5 日法人 [外資, 投信, 自營, 合計]
+        hist = [inst_by_day.get(d.strftime("%Y%m%d"), {}).get(code) for d, _ in days[max(0, end - STREAK_DAYS):end]]
+        if any(hist):
+            row["fs"] = [streak(hist, j) for j in range(4)]  # 連續買（正）賣（負）超天數 [外資, 投信, 自營, 合計]
         if ind and ind.get(code):
             row["i"] = ind[code]  # 產業別
         if mg and code in mg:
@@ -568,12 +632,13 @@ def main():
         print(f"只取得 {len(days)} 個交易日，不足以計算月線。")
         return 1
     otc, otc_date = add_tpex(days)
-    # 上市三大法人：證交所 OpenAPI 沒有個股資料，不再抓網站，只保留上櫃
+    # 三大法人：上市取自證交所 T86（每日），上櫃取自櫃買 OpenAPI；近 STREAK_DAYS 日用來算連買連賣
     inst_by_day = {}
-    for d, _ in days[-(INST_DAYS + 3):]:
-        t = load_cache("otc_t86_" + d.strftime("%Y%m%d") + ".json")
+    for d, _ in days[-(STREAK_DAYS + 3):]:
+        key = d.strftime("%Y%m%d")
+        t = {**(get_t86(d, days[-1][0]) or {}), **(load_cache("otc_t86_" + key + ".json") or {})}
         if t:
-            inst_by_day[d.strftime("%Y%m%d")] = t
+            inst_by_day[key] = t
     recent = [d for d, _ in days[-INST_DAYS:]]
     shares = get_shares()
     otc_sh = os.path.join(CACHE, "otc_shares.json")
@@ -581,10 +646,9 @@ def main():
         with open(otc_sh, encoding="utf-8") as f:
             shares = {**json.load(f), **shares}
     mg = margin_rows(days, otc_date)
-    tdcc = get_tdcc()
-    last_date, rows = compute(days, shares, inst_by_day, otc, get_industry(), mg, tdcc[:2])
+    last_date, rows = compute(days, shares, inst_by_day, otc, get_industry(), mg)
     write_data(last_date, rows, [d.strftime("%m/%d") for d, _ in days],
-               [d.strftime("%m/%d") for d in recent], otc_date, tdcc[2])
+               [d.strftime("%m/%d") for d in recent], otc_date)
     if otc_date and otc_date < last_date:
         print(f"  上櫃資料還停在 {otc_date:%Y-%m-%d}（櫃買中心尚未更新），晚點再執行一次即可補上")
     print(f"\n完成：資料日期 {last_date:%Y-%m-%d}，共 {len(rows)} 檔（上櫃 {sum(1 for r in rows if r.get('m') == 'o')} 檔）。請打開：{PAGE}")
