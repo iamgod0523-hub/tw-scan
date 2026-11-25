@@ -149,20 +149,20 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .cats button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:700}
 .cdesc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:14px;line-height:1.6;color:var(--mut)}
 .cdesc b{color:var(--ink)}
-.secs{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px}
-.sx{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:7px}
-.sx .hd{display:flex;align-items:baseline;gap:8px}
-.sx .rk{font:12px var(--mono);color:var(--mut);min-width:18px}
-.sx .nm{background:none;border:0;padding:0;font-weight:700;font-size:16px;text-align:left;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.secs{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px}
+.sx{background:#fffdf8;border:1px solid var(--line);border-radius:10px;padding:10px 11px 9px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.sx .hd{display:flex;align-items:baseline;gap:6px;min-width:0}
+.sx .rk{font:11px var(--mono);color:var(--mut);margin-left:auto}
+.sx .nm{background:none;border:0;padding:0;font-weight:700;font-size:15px;text-align:left;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 .sx .nm:hover{color:var(--acc)}
-.sx .cnt{font-size:12px;color:var(--mut)}
-.sx .av{margin-left:auto;font:700 18px var(--mono)}
-.sx .bar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--panel2)}
+.sx .pv{display:flex;justify-content:space-between;align-items:baseline}.sx .cnt{font-size:12px;color:var(--mut)}
+.sx .av{font:700 18px var(--mono)}
+.sx .bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--panel2)}
 .sx .bar i{display:block;height:100%}
 .sx .bar .b1{background:var(--up)}.sx .bar .b2{background:#eeaab3}.sx .bar .b3{background:#cfcabf}.sx .bar .b4{background:#7cc4a6}
-.sx .st{display:flex;flex-wrap:wrap;gap:4px 12px;font:12px var(--mono);color:var(--mut)}.sx .st b{color:var(--ink);font-weight:600}.sx .st b.up{color:var(--up)}.sx .st b.dn{color:var(--dn)}
-.sx .lead{font-size:13px;color:var(--soft);line-height:1.7}.sx .lead button{background:none;border:0;padding:0;margin-right:10px;font:inherit;color:var(--ink);white-space:nowrap}.sx .lead button:hover{color:var(--acc)}
-.sx .lead span{font-family:var(--mono);font-size:12px}
+.sx .st{display:grid;grid-template-columns:1fr 1fr;gap:1px 8px;font:11px var(--mono);color:var(--mut)}.sx .st b{color:var(--ink);font-weight:600}.sx .st b.up{color:var(--up)}.sx .st b.dn{color:var(--dn)}
+.sx .lead{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:6px;font-size:12px;color:var(--soft);line-height:1.35;border-top:1px dashed var(--line);padding-top:4px}.sx .lead em{grid-column:1;grid-row:1/span 2;font-style:normal;font-size:11px;color:var(--mut);padding-top:1px}.sx .lead button{grid-column:2;display:flex;justify-content:space-between;gap:6px;width:100%;background:none;border:0;padding:1px 0;font:inherit;color:var(--ink);text-align:left}.sx .lead button>u{text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.sx .lead button:hover{color:var(--acc)}
+.sx .lead span{font-family:var(--mono);font-size:11px;flex:none}
 .scat{grid-column:1/-1;margin-top:8px}.scat:first-child{margin-top:0}.scat h3{display:flex;align-items:baseline;gap:10px;margin:0;padding:4px 2px 2px;font-size:15px;border-bottom:2px solid var(--line)}.scat h3 span{font-size:12px;font-weight:400;color:var(--mut)}.scat h3 b{margin-left:auto;font:600 14px var(--mono)}.scat h3 b.up{color:var(--up)}.scat h3 b.dn{color:var(--dn)}
 .star{color:#c8961e;font-size:12px;margin-left:3px;font-style:normal;vertical-align:1px}
 .leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--mut);margin:-4px 0 10px}.leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
@@ -329,7 +329,7 @@ const CATS = {
   hot: {name: "熱門股", test: x => !x.etf && !x.lag, sort: ["v", "desc"], top: 50,
     desc: "<b>熱門股</b>：今天成交量（張數）最大的前 50 檔。"},
   sec: {name: "族群類別", sector: true, test: () => false,
-    desc: "<b>族群類別</b>：把今天收盤的股票依題材族群或官方產業分組，比較每組的平均漲幅、漲停家數、上漲比例、平均量比和近 5 日漲幅；每組列出漲最多的 3 檔。題材族群至少 3 檔、官方產業至少 5 檔才列入。點族群名稱看組內所有股票。"}};
+    desc: "<b>族群類別</b>：把今天收盤的股票依題材族群或官方產業分組，比較每組的平均漲幅、漲停家數、上漲比例、平均量比和近 5 日漲幅；每組列出漲最多的 2 檔和龍頭股。題材族群至少 3 檔、官方產業至少 5 檔才列入。點族群名稱看組內所有股票。"}};
 let secSrc = load("tws-secsrc", "g"), secSort = load("tws-secsort", "avg");
 let ran = false, grp = "", cat = "filter";
 let sortK = load("tws-sort", "r"); if (!COLS.some(c => c.k === sortK && !c.ns)) sortK = "r";
@@ -457,11 +457,12 @@ function secRun(q) {
   $("secEmpty").hidden = L.length > 0;
   const w = n => (n * 100).toFixed(1) + "%";
   const box = (g, i) => `<div class="sx">
-<div class="hd"><span class="rk">${i + 1}</span><button class="nm" type="button" data-g="${esc(g.k)}">${esc(g.k)}</button><span class="cnt">${g.n} 檔</span><span class="av ${sg(g.avg)}">${pct(g.avg)}</span></div>
+<div class="hd"><button class="nm" type="button" data-g="${esc(g.k)}" title="${esc(g.k)}">${esc(g.k)}</button><span class="rk">${i + 1}</span></div>
+<div class="pv"><b class="av ${sg(g.avg)}">${pct(g.avg)}</b><span class="cnt">${g.n} 檔</span></div>
 <div class="bar" aria-label="漲停 ${g.lim}、上漲 ${g.up - g.lim}、平盤 ${g.flat}、下跌 ${g.dn}"><i class="b1" style="width:${w(g.lim / g.n)}"></i><i class="b2" style="width:${w((g.up - g.lim) / g.n)}"></i><i class="b3" style="width:${w(g.flat / g.n)}"></i><i class="b4" style="width:${w(g.dn / g.n)}"></i></div>
 <div class="st"><span>漲停 <b>${g.lim}</b></span><span>上漲 <b>${Math.round(g.ur * 100)}%</b></span><span>量比 <b>${f2(g.r)}</b></span><span>5日 <b class="${sg(g.d5)}">${g.d5 == null ? "—" : pct(g.d5)}</b></span></div>
-<div class="lead">領漲：${g.top.map(x => `<button type="button" data-k="${x.c}">${esc(x.n)}${x.lead.includes(g.k) ? '<i class="star">★</i>' : ""} <span class="${sg(x.ch)}">${pct(x.ch)}</span></button>`).join("")}</div>
-${g.ld.length ? `<div class="lead">龍頭：${g.ld.map(x => `<button type="button" data-k="${x.c}">${esc(x.n)} <span class="${sg(x.ch)}">${pct(x.ch)}</span></button>`).join("")}</div>` : ""}</div>`;
+<div class="lead"><em>領漲</em>${g.top.slice(0, 2).map(x => `<button type="button" data-k="${x.c}"><u>${esc(x.n)}${x.lead.includes(g.k) ? '<i class="star">★</i>' : ""}</u><span class="${sg(x.ch)}">${pct(x.ch)}</span></button>`).join("")}</div>
+${g.ld.length ? `<div class="lead"><em>龍頭</em>${g.ld.slice(0, 2).map(x => `<button type="button" data-k="${x.c}"><u>${esc(x.n)}</u><span class="${sg(x.ch)}">${pct(x.ch)}</span></button>`).join("")}</div>` : ""}</div>`;
   if (secSrc !== "g") { $("secs").innerHTML = L.map(box).join(""); return; }
   const S = {};
   L.forEach((g, i) => { g.i = i; (S[GC[g.k] || "其他"] = S[GC[g.k] || "其他"] || []).push(g); });
