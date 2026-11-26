@@ -10,7 +10,9 @@ import base64
 import datetime
 import hashlib
 import json
+import math
 import os
+import re
 import ssl
 import sys
 import time
@@ -556,6 +558,126 @@ def compute(days, shares, inst_by_day, otc=frozenset(), ind=None, mg=None, bh=No
     return last_date, rows
 
 
+LINK_TOP = 100        # 前一天成交量前幾名當「領漲股」
+LINK_MIN = 80         # 聯動分數幾分以上才列為「跟漲股」
+
+
+def _rank(a):
+    o = sorted(range(len(a)), key=lambda i: a[i])
+    r = [0.0] * len(a)
+    i = 0
+    while i < len(o):
+        j = i
+        while j + 1 < len(o) and a[o[j + 1]] == a[o[i]]:
+            j += 1
+        for k in range(i, j + 1):
+            r[o[k]] = (i + j) / 2
+        i = j + 1
+    return r
+
+
+def _pear(a, b, n, lag=0):
+    """a[t] 對 b[t+lag] 的排名相關，取最近 n 組（與網頁的算法相同）"""
+    L = min(len(a), len(b))
+    xs, ys = [], []
+    t = L - 1 - lag
+    while t >= 0 and len(xs) < n:
+        p, q = a[t], b[t + lag]
+        if p is not None and q is not None:
+            xs.append(p); ys.append(q)
+        t -= 1
+    if len(xs) < min(n, 15) * 0.8:
+        return None
+    xs, ys = _rank(xs), _rank(ys)
+    mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
+    sxy = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    sx = sum((x - mx) ** 2 for x in xs)
+    sy = sum((y - my) ** 2 for y in ys)
+    return sxy / (sx * sy) ** 0.5 if sx and sy else None
+
+
+def _same_dir(a, b, n):
+    L = min(len(a), len(b))
+    m = k = 0
+    for t in range(L - 1, -1, -1):
+        if k >= n:
+            break
+        p, q = a[t], b[t]
+        if p is None or q is None or (abs(p) >= .095 and abs(q) >= .095):
+            continue
+        k += 1
+        sp = (round(p * 1e4) > 0) - (round(p * 1e4) < 0)
+        sq = (round(q * 1e4) > 0) - (round(q * 1e4) < 0)
+        if sp == sq:
+            m += 1
+    return m / k if k >= 10 else None
+
+
+def _series(K):
+    r, lv = [], []
+    for i in range(len(K)):
+        a, b = K[i - 1] if i else None, K[i]
+        r.append(b[3] / a[3] - 1 if a and b and a[3] else None)
+        lv.append(math.log(b[4] / a[4]) if a and b and a[4] and b[4] and a[4] > 0 and b[4] > 0 else None)
+    return r, lv
+
+
+def _score(A, B):
+    cl = lambda v: max(0.0, min(1.0, v or 0))
+    c20, c60, c120 = _pear(A[0], B[0], 20), _pear(A[0], B[0], 60), _pear(A[0], B[0], 120)
+    if c20 is None and c60 is None:
+        return None
+    sd, vs = _same_dir(A[0], B[0], 20), _pear(A[1], B[1], 60)
+    ab = ba = -1
+    for d in (1, 2):
+        p, q = _pear(A[0], B[0], 60, d), _pear(B[0], A[0], 60, d)
+        if p is not None and p > ab: ab = p
+        if q is not None and q > ba: ba = q
+    best = max(ab, ba)
+    nz = lambda *v: next((x for x in v if x is not None), None)
+    cm = nz(c20, c60) * .5 + nz(c60, c20) * .3 + nz(c120, c60, c20) * .2
+    sc = 100 * (.3 * cl(cm / .8) + .25 * cl(((sd if sd is not None else 0) - .5) / .4) + .2 * cl((vs or 0) / .6)
+                + .15 * cl(max(nz(c60, c20), best) / .8) + .1)
+    return int(math.floor(sc + 0.5))
+
+
+def write_links(rows, last_date):
+    """盤中「族群聯動」通知用：前一天成交量前 LINK_TOP 名（領漲股）→ 同族群聯動 LINK_MIN 分以上的股票（跟漲股）"""
+    gpath = os.path.join(BASE, "groups.js")
+    if not os.path.exists(gpath):
+        return
+    with open(gpath, encoding="utf-8") as f:
+        m = re.search(r"TWS_GROUPS\s*=\s*(\{.*?\});", f.read(), re.S)
+    groups = json.loads(m.group(1)) if m else {}
+    ok = [r for r in rows if re.fullmatch(r"[1-9]\d{3}", r["c"]) and not r.get("e") and r["c"] in groups and r["k"][-1]]
+    by = {r["c"]: r for r in ok}
+    ser = {}
+    S = lambda c: ser.setdefault(c, _series(by[c]["k"]))
+    top = sorted(ok, key=lambda r: -(r["k"][-1][4] or 0))[:LINK_TOP]
+    lead, used = {}, set()
+    for r in top:
+        x, out = r["c"], []
+        for y, ry in by.items():
+            if y == x:
+                continue
+            g = [n for n in groups[y] if n in groups[x]]
+            if not g:
+                continue
+            s = _score(S(x), S(y))
+            if s is not None and s >= LINK_MIN:
+                out.append([y, s, g[0]])
+        if out:
+            out.sort(key=lambda v: -v[1])
+            lead[x] = out[:8]
+            used.add(x); used.update(v[0] for v in out[:8])
+    data = {"date": last_date.strftime("%Y-%m-%d"), "lead": lead,
+            "n": {c: by[c]["n"] for c in sorted(used)}, "o": sorted(c for c in used if by[c].get("m") == "o")}
+    os.makedirs(os.path.join(BASE, "data"), exist_ok=True)
+    with open(os.path.join(BASE, "data", "links.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"  族群聯動：領漲股 {len(lead)} 檔、追蹤 {len(used)} 檔")
+
+
 def write_data(last_date, rows, dates, fdates, otc_date=None, bdate=None):
     payload = json.dumps({"date": last_date.strftime("%Y-%m-%d"), "dates": dates, "fdates": fdates,
                           "odate": otc_date.strftime("%Y-%m-%d") if otc_date else None, "bdate": bdate,
@@ -649,6 +771,10 @@ def main():
     last_date, rows = compute(days, shares, inst_by_day, otc, get_industry(), mg)
     write_data(last_date, rows, [d.strftime("%m/%d") for d, _ in days],
                [d.strftime("%m/%d") for d in recent], otc_date)
+    try:
+        write_links(rows, last_date)
+    except Exception as e:
+        print(f"  族群聯動表產生失敗：{e}")
     if otc_date and otc_date < last_date:
         print(f"  上櫃資料還停在 {otc_date:%Y-%m-%d}（櫃買中心尚未更新），晚點再執行一次即可補上")
     print(f"\n完成：資料日期 {last_date:%Y-%m-%d}，共 {len(rows)} 檔（上櫃 {sum(1 for r in rows if r.get('m') == 'o')} 檔）。請打開：{PAGE}")
