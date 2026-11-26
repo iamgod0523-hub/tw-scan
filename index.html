@@ -142,6 +142,9 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .mini{background:var(--bg);border:1px solid var(--line);border-radius:10px}
 .mini th,.mini td{padding:8px 10px;font-size:13px;cursor:default}.mini th{background:var(--bg)}
 .mini tr:last-child td{border-bottom:0;font-weight:700}
+.mini.lk tr:last-child td{font-weight:400}.mini.lk tr[data-c]{cursor:pointer}.mini.lk tr[data-c] td{cursor:pointer}.mini.lk tr[data-c]:hover td{background:var(--panel2)}
+.mini.lk small{color:var(--mut,#888);margin-left:4px}.lv{display:inline-block;font-size:11px;padding:1px 6px;border-radius:6px;margin-left:4px;border:1px solid var(--line)}
+.lv.h{color:#d93025;border-color:#d93025}.lv.m{color:#b07b00;border-color:#d6a300}.lkn{font-size:12px;color:var(--mut,#888);margin:6px 2px 0;line-height:1.5}
 .df{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--mut)}
 .go{background:var(--acc);color:#fff;font-weight:700;text-decoration:none;border-radius:8px;padding:11px 16px;white-space:nowrap}
 .tools{display:flex;gap:10px;margin-left:auto}
@@ -290,6 +293,9 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
     <div class="lg"><span>日 K</span><span><span class="c5" id="lg5"></span> · <span class="c20" id="lg20"></span><span id="lg60w"> · <span class="c60" id="lg60"></span></span></span></div>
     <div class="fig" id="fig"><canvas id="cv"></canvas><div class="tip" id="tip"></div></div>
     <div class="cmp" id="cmp"></div>
+    <h3 class="sh">族群聯動股</h3>
+    <div class="scroll"><table class="mini lk" id="linkT"></table></div>
+    <p class="lkn" id="linkN"></p>
     <h3 class="sh">三大法人買賣超（張）</h3>
     <div class="scroll"><table class="mini" id="instT"></table></div>
   </div>
@@ -553,6 +559,61 @@ function header() {
 /* ---- K 線側板 ---- */
 let open = null;
 function ma(c, n, i) { let s = 0; for (let j = i - n + 1; j <= i; j++) { if (j < 0 || c[j] == null) return null; s += c[j]; } return s / n; }
+/* 族群聯動：用日報酬率算相關係數、同漲跌率、成交量同步、領漲落後，權重依「族群聯動資料庫 V1」名單設定 */
+const LW = {cr: .3, sd: .25, vs: .2, ll: .15, ind: .1}, LKC = new Map();
+function lkSer(x) {
+  if (x._ls) return x._ls;
+  const K = x.k, r = [], lv = [];
+  for (let i = 0; i < K.length; i++) { const a = K[i - 1], b = K[i];
+    r.push(a && b && a[3] ? b[3] / a[3] - 1 : null); lv.push(a && b && a[4] > 0 && b[4] > 0 ? Math.log(b[4] / a[4]) : null); }
+  return x._ls = {r, lv};
+}
+function pear(a, b, n, lag = 0) { // a[t] 對 b[t+lag]，取最近 n 組
+  const L = Math.min(a.length, b.length), xs = [], ys = [];
+  for (let t = L - 1 - lag; t >= 0 && xs.length < n; t--) { const p = a[t], q = b[t + lag]; if (p != null && q != null) { xs.push(p); ys.push(q); } }
+  if (xs.length < Math.min(n, 15) * 0.8) return null;
+  const mx = avg(xs), my = avg(ys); let sxy = 0, sx = 0, sy = 0;
+  for (let i = 0; i < xs.length; i++) { const dx = xs[i] - mx, dy = ys[i] - my; sxy += dx * dy; sx += dx * dx; sy += dy * dy; }
+  return sx && sy ? sxy / Math.sqrt(sx * sy) : null;
+}
+function sameDir(a, b, n) {
+  const L = Math.min(a.length, b.length); let m = 0, k = 0;
+  for (let t = L - 1; t >= 0 && k < n; t--) { const p = a[t], q = b[t]; if (p == null || q == null) continue; k++; if (Math.sign(Math.round(p * 1e4)) === Math.sign(Math.round(q * 1e4))) m++; }
+  return k >= 10 ? m / k : null;
+}
+function lkPair(x, y, indW) {
+  const A = lkSer(x), B = lkSer(y), cl = v => Math.max(0, Math.min(1, v || 0));
+  const c20 = pear(A.r, B.r, 20), c60 = pear(A.r, B.r, 60), c120 = pear(A.r, B.r, 120);
+  if (c20 == null && c60 == null) return null;
+  const sd = sameDir(A.r, B.r, 20), vs = pear(A.lv, B.lv, 60);
+  let ab = {c: -1, d: 0}, ba = {c: -1, d: 0};
+  for (let d = 1; d <= 2; d++) { const p = pear(A.r, B.r, 60, d), q = pear(B.r, A.r, 60, d);
+    if (p != null && p > ab.c) ab = {c: p, d}; if (q != null && q > ba.c) ba = {c: q, d}; }
+  const best = Math.max(ab.c, ba.c), lead = best > 0.25 && Math.abs(ab.c - ba.c) > 0.1 ? (ab.c > ba.c ? {who: x.c, d: ab.d} : {who: y.c, d: ba.d}) : null;
+  const cm = (c20 ?? c60) * .5 + (c60 ?? c20) * .3 + (c120 ?? c60 ?? c20) * .2;
+  const sc = 100 * (LW.cr * cl(cm / .8) + LW.sd * cl((sd - .5) / .4) + LW.vs * cl(vs / .6) + LW.ll * cl(Math.max(c60 ?? c20, best) / .8) + LW.ind * indW);
+  return {y, c20, c60, c120, sd, vs, lead, sc: Math.round(sc)};
+}
+function links(x) {
+  if (LKC.has(x.c)) return LKC.get(x.c);
+  const peers = new Map();
+  for (const y of all) { if (y.c === x.c || y.etf) continue; const g = y.g.filter(n => x.g.includes(n)); if (g.length) peers.set(y.c, {y, g, w: 1}); }
+  if (peers.size < 3 && x.ind) for (const y of all) if (y.c !== x.c && !y.etf && y.ind === x.ind && !peers.has(y.c)) peers.set(y.c, {y, g: [x.ind], w: .5});
+  const out = [];
+  for (const {y, g, w} of peers.values()) { const p = lkPair(x, y, w); if (p) out.push({...p, g}); }
+  out.sort((a, b) => b.sc - a.sc);
+  LKC.set(x.c, out); return out;
+}
+function renderLinks(x) {
+  const L = links(x), top = L.slice(0, 8), f = v => v == null ? "—" : v.toFixed(2), pc = v => v == null ? "—" : Math.round(v * 100) + "%";
+  const lv = s => s >= 80 ? `<span class="lv h">高度</span>` : s >= 60 ? `<span class="lv m">中度</span>` : "";
+  const ld = p => !p.lead ? "同步" : p.lead.who === x.c ? `本檔領先 ${p.lead.d} 天` : `對方領先 ${p.lead.d} 天`;
+  $("linkT").innerHTML = !top.length ? `<tr><td class="l">沒有同族群或同產業的股票可比較</td></tr>` :
+    `<tr><th class="l">股票</th><th>聯動分數</th><th>今日</th><th>20日相關</th><th>同漲跌</th><th>領漲</th></tr>` +
+    top.map(p => `<tr data-c="${p.y.c}" title="共同：${esc(p.g.join("、"))}｜60日相關 ${f(p.c60)}・120日 ${f(p.c120)}・量同步 ${f(p.vs)}"><td class="l">${esc(p.y.n)}<small>${p.y.c}</small></td><td>${p.sc}${lv(p.sc)}</td><td><span class="${sg(p.y.ch)}">${pct(p.y.ch)}</span></td><td>${f(p.c20)}</td><td>${pc(p.sd)}</td><td>${ld(p)}</td></tr>`).join("");
+  const basis = L.length && L[0].g && x.g.length ? `同族群（${esc(x.g.join("、"))}）` : x.ind ? `同產業（${esc(x.ind)}）` : "";
+  $("linkN").innerHTML = top.length ? `比較對象：${basis}共 ${L.length} 檔，列出分數最高的 ${top.length} 檔，點一下可切換。分數 80 以上為高度聯動、60 以上為中度；用日報酬率計算，僅供參考。` : "";
+}
 function showK(code) {
   const x = all.find(r => r.c === code); if (!x) return;
   open = x;
@@ -567,6 +628,7 @@ function showK(code) {
   $("instT").innerHTML = !x.f.some(Boolean) ? `<tr><td class="l">尚無三大法人資料</td></tr>` : `<tr><th class="l">日期</th><th>外資</th><th>投信</th><th>自營商</th><th>合計</th></tr>` +
     x.f.map((d, i) => `<tr><td class="l">${fd[i] || ""}</td>${d ? d.map(sgn).map(v => `<td>${v}</td>`).join("") : `<td colspan="4">尚無資料</td>`}</tr>`).join("") +
     `<tr><td class="l">${x.f.length} 日合計</td>${[0, 1, 2, 3].map(j => `<td>${sgn(sum(j))}</td>`).join("")}</tr>`;
+  renderLinks(x);
   setDaily(); renderWatchBtn(); $("dClose").focus();
 }
 function closeK() { open = null; $("shade").hidden = true; $("drawer").classList.remove("open"); $("drawer").setAttribute("aria-hidden", "true"); }
@@ -640,6 +702,7 @@ function fill(o) { for (const k of FK) { const e = $("f_" + k); if (e.type === "
 function readF() { for (const k of FK) { const e = $("f_" + k); F[k] = e.type === "checkbox" ? e.checked : e.value; } save("tws-filter", F); const {cond} = summary(); $("fsum").textContent = cond.length ? cond.join("・") : "未設定條件"; }
 fill(F);
 $("fp").addEventListener("input", readF); $("fp").addEventListener("change", readF);
+$("linkT").addEventListener("click", e => { const t = e.target.closest("tr[data-c]"); if (t) { showK(t.dataset.c); $("drawer").querySelector(".db").scrollTop = 0; } });
 $("fDef").addEventListener("click", () => { fill(DEF); readF(); });
 $("fClear").addEventListener("click", () => { fill(CLEAR); readF(); });
 $("fGo").addEventListener("click", () => { readF(); ran = true; grp = ""; limit = PG; run(); $("mode").scrollIntoView({behavior: "smooth", block: "start"}); });
