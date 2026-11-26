@@ -882,7 +882,7 @@ function feedBody(lines) {
 const ATYPES = [
   {k: "rebound", name: "低點反彈", re: /低點反彈|5穿20/}, {k: "hi", name: "突破昨日高點", re: /突破昨日高點|突破前高/},
   {k: "lo", name: "跌破昨日低點", re: /跌破昨日低點|跌破前低/}, {k: "ma20", name: "跌破20MA", re: /跌破20MA/i},
-  {k: "vol", name: "60分K爆量", re: /爆量/}, {k: "black", name: "黑飛型態", re: /黑飛/}];
+  {k: "vol", name: "60分K爆量", re: /爆量/}, {k: "black", name: "黑飛型態", re: /黑飛/}, {k: "link", name: "族群聯動", re: /族群聯動/}];
 const aType = title => { const t = String(title).replace(/\s+/g, ""); return (ATYPES.find(x => x.re.test(t)) || {k: "other"}).k; };
 let aCat = load("tws-acat", "all");
 /* 主畫面 App 圖示上的紅色數字（iPhone 需 iOS 16.4 以上、從主畫面開啟的 App）；也同步給背景程式累加用 */
