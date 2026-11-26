@@ -572,13 +572,16 @@ function pear(a, b, n, lag = 0) { // a[t] 對 b[t+lag]，取最近 n 組
   const L = Math.min(a.length, b.length), xs = [], ys = [];
   for (let t = L - 1 - lag; t >= 0 && xs.length < n; t--) { const p = a[t], q = b[t + lag]; if (p != null && q != null) { xs.push(p); ys.push(q); } }
   if (xs.length < Math.min(n, 15) * 0.8) return null;
+  const rk = a => { const o = a.map((v, i) => [v, i]).sort((p, q) => p[0] - q[0]), r = new Array(a.length); // 排名相關：極端漲跌停日不會放大結果
+    for (let i = 0; i < o.length;) { let j = i; while (j + 1 < o.length && o[j + 1][0] === o[i][0]) j++; for (let k = i; k <= j; k++) r[o[k][1]] = (i + j) / 2; i = j + 1; } return r; };
+  const X = rk(xs), Y = rk(ys); xs.length = 0; ys.length = 0; xs.push(...X); ys.push(...Y);
   const mx = avg(xs), my = avg(ys); let sxy = 0, sx = 0, sy = 0;
   for (let i = 0; i < xs.length; i++) { const dx = xs[i] - mx, dy = ys[i] - my; sxy += dx * dy; sx += dx * dx; sy += dy * dy; }
   return sx && sy ? sxy / Math.sqrt(sx * sy) : null;
 }
 function sameDir(a, b, n) {
   const L = Math.min(a.length, b.length); let m = 0, k = 0;
-  for (let t = L - 1; t >= 0 && k < n; t--) { const p = a[t], q = b[t]; if (p == null || q == null) continue; k++; if (Math.sign(Math.round(p * 1e4)) === Math.sign(Math.round(q * 1e4))) m++; }
+  for (let t = L - 1; t >= 0 && k < n; t--) { const p = a[t], q = b[t]; if (p == null || q == null || Math.abs(p) >= .095 && Math.abs(q) >= .095) continue; /* 兩檔同時漲跌停的日子不算 */ k++; if (Math.sign(Math.round(p * 1e4)) === Math.sign(Math.round(q * 1e4))) m++; }
   return k >= 10 ? m / k : null;
 }
 function lkPair(x, y, indW) {
@@ -609,10 +612,10 @@ function renderLinks(x) {
   const lv = s => s >= 80 ? `<span class="lv h">高度</span>` : s >= 60 ? `<span class="lv m">中度</span>` : "";
   const ld = p => !p.lead ? "同步" : p.lead.who === x.c ? `本檔領先 ${p.lead.d} 天` : `對方領先 ${p.lead.d} 天`;
   $("linkT").innerHTML = !top.length ? `<tr><td class="l">沒有同族群或同產業的股票可比較</td></tr>` :
-    `<tr><th class="l">股票</th><th>聯動分數</th><th>今日</th><th>20日相關</th><th>同漲跌</th><th>領漲</th></tr>` +
+    `<tr><th class="l">股票</th><th>聯動分數</th><th>今日</th><th>20日相關</th><th>平常日同漲跌</th><th>領漲</th></tr>` +
     top.map(p => `<tr data-c="${p.y.c}" title="共同：${esc(p.g.join("、"))}｜60日相關 ${f(p.c60)}・120日 ${f(p.c120)}・量同步 ${f(p.vs)}"><td class="l">${esc(p.y.n)}<small>${p.y.c}</small></td><td>${p.sc}${lv(p.sc)}</td><td><span class="${sg(p.y.ch)}">${pct(p.y.ch)}</span></td><td>${f(p.c20)}</td><td>${pc(p.sd)}</td><td>${ld(p)}</td></tr>`).join("");
   const basis = L.length && L[0].g && x.g.length ? `同族群（${esc(x.g.join("、"))}）` : x.ind ? `同產業（${esc(x.ind)}）` : "";
-  $("linkN").innerHTML = top.length ? `比較對象：${basis}共 ${L.length} 檔，列出分數最高的 ${top.length} 檔，點一下可切換。分數 80 以上為高度聯動、60 以上為中度；用日報酬率計算，僅供參考。` : "";
+  $("linkN").innerHTML = top.length ? `比較對象：${basis}共 ${L.length} 檔，列出分數最高的 ${top.length} 檔，點一下可切換。分數 80 以上為高度聯動、60 以上為中度。相關係數用漲跌幅「排名」計算，避免少數幾天一起漲停、跌停把數字拉高；「平常日同漲跌」是排除兩檔同時漲跌停的日子後，最近 20 個交易日同方向的比例。僅供參考。` : "";
 }
 function showK(code) {
   const x = all.find(r => r.c === code); if (!x) return;
