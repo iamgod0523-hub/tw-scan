@@ -144,7 +144,8 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .mini tr:last-child td{border-bottom:0;font-weight:700}
 .mini.lk tr:last-child td{font-weight:400}.mini.lk tr[data-c]{cursor:pointer}.mini.lk tr[data-c] td{cursor:pointer}.mini.lk tr[data-c]:hover td{background:var(--panel2)}
 .mini.lk small{color:var(--mut,#888);margin-left:4px}.lv{display:inline-block;font-size:11px;padding:1px 6px;border-radius:6px;margin-left:4px;border:1px solid var(--line)}
-.lv.h{color:#d93025;border-color:#d93025}.lv.m{color:#b07b00;border-color:#d6a300}.lkn{font-size:12px;color:var(--mut,#888);margin:6px 2px 0;line-height:1.5}
+.lv.h{color:#d93025;border-color:#d93025}.lv.m{color:#b07b00;border-color:#d6a300}.sc .czn{font-size:12px;line-height:1.5;color:var(--soft);background:var(--panel2);border-radius:6px;padding:4px 8px;margin-top:6px}.czn b{color:var(--ink)}
+.lkn{font-size:12px;color:var(--mut,#888);margin:6px 2px 0;line-height:1.5}
 .df{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--mut)}
 .go{background:var(--acc);color:#fff;font-weight:700;text-decoration:none;border-radius:8px;padding:11px 16px;white-space:nowrap}
 .tools{display:flex;gap:10px;margin-left:auto}
@@ -246,7 +247,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
     </div>
   </section>
   <div id="scanView">
-  <div class="cats" role="tablist" id="cats"><button type="button" data-cat="filter">自訂篩選</button><button type="button" data-cat="up" class="cu">當日漲幅榜</button><button type="button" data-cat="dn" class="cd">當日跌幅榜</button><button type="button" data-cat="luo" class="cu">漲停沒鎖住</button><button type="button" data-cat="ldo" class="cd">跌停沒鎖住</button><button type="button" data-cat="hot">熱門股</button></div>
+  <div class="cats" role="tablist" id="cats"><button type="button" data-cat="filter">自訂篩選</button><button type="button" data-cat="up" class="cu">當日漲幅榜</button><button type="button" data-cat="dn" class="cd">當日跌幅榜</button><button type="button" data-cat="luo" class="cu">漲停沒鎖住</button><button type="button" data-cat="ldo" class="cd">跌停沒鎖住</button><button type="button" data-cat="hot">熱門股</button><button type="button" data-cat="cz" class="cu">補漲觀察</button></div>
   <div class="cdesc" id="cDesc" hidden></div>
   <details class="fpanel" id="fp">
     <summary>篩選條件<small id="fsum"></small></summary>
@@ -326,6 +327,8 @@ const CATS = {
     desc: "<b>漲停沒鎖住</b>：今天盤中最高價碰到漲停價，但收盤沒有鎖在漲停的股票，依收盤漲幅排序（越前面收得越接近漲停）。"},
   ldo: {name: "跌停沒鎖住", test: x => !x.etf && !x.lag && x.ldo, sort: ["ch", "asc"],
     desc: "<b>跌停沒鎖住</b>：今天盤中最低價碰到跌停價，但收盤沒有鎖在跌停的股票，依收盤跌幅排序（越前面收得越接近跌停）。"},
+  cz: {name: "補漲觀察", test: x => x.cz != null, sort: ["cz", "desc"],
+    desc: "<b>補漲觀察</b>：今天族群走強（族群平均漲幅 ≥ 2%，且至少一檔漲 7% 以上），但這檔還沒跟上（漲跌幅 −3%～+3%、成交量 ≥ 300 張），而且跟族群裡大漲的股票聯動分數 ≥ 60。依聯動分數排序，卡片下方註明跟誰聯動。聯動高不代表明天一定補漲，僅供觀察。"},
   hot: {name: "熱門股", test: x => !x.etf && !x.lag, sort: ["v", "desc"], top: 50,
     desc: "<b>熱門股</b>：今天成交量（張數）最大的前 50 檔。"},
   sec: {name: "族群類別", sector: true, test: () => false,
@@ -549,10 +552,10 @@ function card(x, i) {
 <div class="nm"><span class="nmt"><b>${x.c}</b><small>${esc(x.n)}</small>${star(x)}${x.otc ? '<span class="otc">櫃</span>' : ""}${x.lag ? '<span class="otc">前日</span>' : ""}</span>${kbar(x)}</div>
 <div class="px ${sg(x.ch)}"><b class="${lc(x)}" ${lc(x) ? `title="${x.lim ? "漲停" : "跌停"}"` : ""}>${f2(x.p)}</b><span>${pct(x.ch)}</span></div>
 <div class="ch" data-c="${x.c}">${today(x)}</div>
-<div class="mt"><span>量 <i>${x.v.toLocaleString()}</i></span><span>量比 <i>${f2(x.r)}</i></span></div>${fi || x.md != null ? `<div class="mt">${fi || "<span></span>"}${x.md != null ? `<span>資 <i class="${sg(x.md)}">${sn(x.md)}</i></span>` : ""}</div>` : ""}${x.sf || x.st ? `<div class="mt"><span>外資 <i class="${sg(x.sf)}">${sk(x.sf)}</i></span><span>投信 <i class="${sg(x.st)}">${sk(x.st)}</i></span></div>` : ""}</div>`;
+${cat === "cz" && x.czl ? `<div class="czn">跟 <b>${esc(x.czl.n)}</b> <span class="${sg(x.czl.ch)}">${pct(x.czl.ch)}</span><br>聯動 <b>${x.cz}</b> 分</div>` : ""}<div class="mt"><span>量 <i>${x.v.toLocaleString()}</i></span><span>量比 <i>${f2(x.r)}</i></span></div>${fi || x.md != null ? `<div class="mt">${fi || "<span></span>"}${x.md != null ? `<span>資 <i class="${sg(x.md)}">${sn(x.md)}</i></span>` : ""}</div>` : ""}${x.sf || x.st ? `<div class="mt"><span>外資 <i class="${sg(x.sf)}">${sk(x.sf)}</i></span><span>投信 <i class="${sg(x.st)}">${sk(x.st)}</i></span></div>` : ""}</div>`;
 }
 function header() {
-  $("cSort").innerHTML = COLS.filter(c => !c.ns).map(c => { const nm = c.t.replace(/\(.*\)/, ""); return c.k === "c" ? `<option value="c:asc">代號 小→大</option><option value="c:desc">代號 大→小</option>` : `<option value="${c.k}:desc">${nm} 高→低</option><option value="${c.k}:asc">${nm} 低→高</option>`; }).join("");
+  $("cSort").innerHTML = COLS.filter(c => !c.ns).map(c => { const nm = c.t.replace(/\(.*\)/, ""); return c.k === "c" ? `<option value="c:asc">代號 小→大</option><option value="c:desc">代號 大→小</option>` : `<option value="${c.k}:desc">${nm} 高→低</option><option value="${c.k}:asc">${nm} 低→高</option>`; }).join("") + (cat === "cz" ? `<option value="cz:desc">聯動分數 高→低</option>` : "");
   $("hd").innerHTML = COLS.map(c => `<th class="${c.l ? "l" : ""} ${c.h ? "hs" : ""}" ${c.ns ? "" : `data-k="${c.k}" tabindex="0"`} ${c.k === sortK ? `data-dir="${sortDir}"` : ""}>${c.t}</th>`).join("");
 }
 
@@ -616,6 +619,20 @@ function renderLinks(x) {
     top.map(p => `<tr data-c="${p.y.c}" title="共同：${esc(p.g.join("、"))}｜60日相關 ${f(p.c60)}・120日 ${f(p.c120)}・量同步 ${f(p.vs)}"><td class="l">${esc(p.y.n)}<small>${p.y.c}</small></td><td>${p.sc}${lv(p.sc)}</td><td><span class="${sg(p.y.ch)}">${pct(p.y.ch)}</span></td><td>${f(p.c20)}</td><td>${pc(p.sd)}</td><td>${ld(p)}</td></tr>`).join("");
   const basis = L.length && L[0].g && x.g.length ? `同族群（${esc(x.g.join("、"))}）` : x.ind ? `同產業（${esc(x.ind)}）` : "";
   $("linkN").innerHTML = top.length ? `比較對象：${basis}共 ${L.length} 檔，列出分數最高的 ${top.length} 檔，點一下可切換。分數 80 以上為高度聯動、60 以上為中度。相關係數用漲跌幅「排名」計算，避免少數幾天一起漲停、跌停把數字拉高；「平常日同漲跌」是排除兩檔同時漲跌停的日子後，最近 20 個交易日同方向的比例。僅供參考。` : "";
+}
+/* 補漲觀察：族群強、本檔還沒動、跟族群裡的大漲股高度聯動 */
+{
+  const G = {};
+  for (const x of all) if (!x.etf && !x.lag) for (const g of x.g) (G[g] ||= []).push(x);
+  for (const [g, a] of Object.entries(G)) {
+    if (a.length < 3) continue;
+    const lead = a.filter(x => x.ch >= 7);
+    if (!lead.length || avg(a.map(x => x.ch)) < 2) continue;
+    for (const x of a) {
+      if (x.ch < -3 || x.ch > 3 || x.v < 300) continue;
+      for (const p of links(x)) if (lead.includes(p.y) && p.sc >= 60 && (x.cz == null || p.sc > x.cz)) { x.cz = p.sc; x.czl = p.y; x.czg = g; }
+    }
+  }
 }
 function showK(code) {
   const x = all.find(r => r.c === code); if (!x) return;
