@@ -88,7 +88,7 @@ h2 .gchip{font-size:12px;font-weight:400;vertical-align:2px}
 .sc{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 11px 9px;cursor:pointer;display:flex;flex-direction:column;gap:3px}
 .sc:hover{border-color:var(--acc)}
 .sc .no{position:absolute;top:9px;right:10px;font:11px var(--mono);color:var(--mut)}
-.sc .tg{min-height:24px;padding-right:22px}.sc .tg .gchip{font-size:11px;padding:2px 6px;margin:0 3px 2px 0}
+.sc .tg{min-height:24px;padding-right:22px}.gchip.gmore{color:var(--acc);border-style:dashed}.sc .tg .gchip{font-size:11px;padding:2px 6px;margin:0 3px 2px 0}
 .sc .nm{font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px}.sc .nmt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .sc .kb{flex:none;margin-left:auto;width:11px;height:24px;overflow:visible}
 .sc .nm a{color:var(--ink);text-decoration:none;font-family:var(--mono)}.sc .nm small{font-weight:400;color:var(--soft);margin-left:5px;font-size:14px}
@@ -545,7 +545,9 @@ function spark(x) {
   return `<svg viewBox="0 0 100 44" preserveAspectRatio="none" aria-label="近 20 日收盤走勢"><polygon points="${pts[0][0]},44 ${line} ${pts[pts.length - 1][0]},44" fill="${col}" opacity=".09"/><polyline points="${line}" fill="none" stroke="${col}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
 }
 function card(x, i) {
-  const t = (x.ind ? [`<button class="gchip ind" type="button" data-g="${esc(x.ind)}">${esc(x.ind)}</button>`] : []).concat(chips(x.g.slice(0, x.ind ? 1 : 2)) ? [chips(x.g.slice(0, x.ind ? 1 : 2))] : []);
+  const gn = x.ind ? 1 : 2, more = x.g.length - gn;
+  const t = (x.ind ? [`<button class="gchip ind" type="button" data-g="${esc(x.ind)}">${esc(x.ind)}</button>`] : []).concat(chips(x.g.slice(0, gn)) ? [chips(x.g.slice(0, gn))] : [])
+    .concat(more > 0 ? [`<button class="gchip gmore" type="button" data-more="${x.c}" title="還有 ${more} 個族群，點一下展開">+${more}</button>`] : []);
   const fi = x.fi == null ? "" : `<i class="${sg(x.fi)}">法人 ${(x.fi > 0 ? "+" : "") + x.fi.toLocaleString()}</i>`;
   return `<div class="sc" data-c="${x.c}" tabindex="0" role="button" aria-label="${x.c} ${esc(x.n)}，看 K 線">
 <span class="no">${i + 1}</span><div class="tg">${t.join("")}</div>
@@ -748,7 +750,9 @@ $("sSort").addEventListener("change", e => { secSort = e.target.value; save("tws
 $("secs").addEventListener("click", e => { const g = e.target.closest("[data-g]"); if (g) return showGroup(g.dataset.g); const k = e.target.closest("[data-k]"); if (k) showK(k.dataset.k); });
 $("vTog").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; view = b.dataset.v; save("tws-view", view); render(); });
 $("cSort").addEventListener("change", e => { const [k, d] = e.target.value.split(":"); sortK = k; sortDir = d; save("tws-sort", k); save("tws-dir", d); header(); run(); });
-$("cards").addEventListener("click", e => { if (e.target.closest("a")) return; const g = e.target.closest(".gchip"); if (g) return showGroup(g.dataset.g); const c = e.target.closest(".sc"); if (c) showK(c.dataset.c); });
+$("cards").addEventListener("click", e => { if (e.target.closest("a")) return;
+  const mo = e.target.closest(".gmore"); if (mo) { const x = all.find(y => y.c === mo.dataset.more); if (x) mo.parentNode.innerHTML = (x.ind ? `<button class="gchip ind" type="button" data-g="${esc(x.ind)}">${esc(x.ind)}</button>` : "") + chips(x.g); return; }
+  const g = e.target.closest(".gchip"); if (g) return showGroup(g.dataset.g); const c = e.target.closest(".sc"); if (c) showK(c.dataset.c); });
 $("cards").addEventListener("keydown", e => { const c = e.target.closest(".sc"); if (c && e.target === c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showK(c.dataset.c); } });
 $("tb").addEventListener("click", e => { const g = e.target.closest(".gchip"); if (g) return showGroup(g.dataset.g); const b = e.target.closest(".kbtn, .symb"); if (b) showK(b.dataset.c); });
 $("dName").addEventListener("click", e => { const g = e.target.closest(".gchip"); if (g) showGroup(g.dataset.g); });
